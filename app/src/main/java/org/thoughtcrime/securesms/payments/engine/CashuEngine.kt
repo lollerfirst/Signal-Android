@@ -88,7 +88,7 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
         amountSats = amountSats,
         feeSats = 0L,
         totalSats = amountSats,
-        expiresAtMs = cdkQuote.expiry,
+        expiresAtMs = cdkQuote.expiry.toLong(),
         invoiceBolt11 = cdkQuote.request,
         id = cdkQuote.id
       )
