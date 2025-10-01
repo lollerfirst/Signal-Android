@@ -1,5 +1,7 @@
 # Cashu Integration Implementation Journal
 
+- [ ] Build fix: bump minSdk to 24 to satisfy cdk-kotlin v0.13.0
+
 This journal logs each incremental step taken to migrate from MobileCoin to Cashu using CDK Kotlin, including commands, file changes, and encountered issues.
 
 Date: 2025-10-01
