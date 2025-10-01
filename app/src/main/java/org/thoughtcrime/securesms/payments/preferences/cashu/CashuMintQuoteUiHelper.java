@@ -10,7 +10,7 @@ import org.thoughtcrime.securesms.payments.engine.MintQuote;
 
 /**
  * Helper to build a display string/QR content for mint quotes.
- * NOTE: For now, returns a simple text payload while we decide on the exact QR schema.
+ * Now returns the Lightning invoice (BOLT11) when available.
  */
 public final class CashuMintQuoteUiHelper {
   private static final String TAG = Log.tag(CashuMintQuoteUiHelper.class);
@@ -19,10 +19,14 @@ public final class CashuMintQuoteUiHelper {
 
   public static @NonNull String getOrCreateMintQuoteQr(@NonNull Context context) {
     try {
-      long amountSats = 10_000L; // stub: 10k sats; next step: allow user to specify
+      long amountSats = 10_000L; // TODO: wire UI amount
       MintQuote quote = CashuUiInteractor.requestMintQuoteBlocking(context, amountSats);
+      if (quote != null && quote.getInvoiceBolt11() != null && !quote.getInvoiceBolt11().isEmpty()) {
+        return quote.getInvoiceBolt11();
+      }
+      // Fallback: still show a Cashu mint-quote placeholder
       if (quote != null) {
-        return "cashu:mint-quote?mint=" + quote.getMintUrl() + "&amount=" + quote.getAmountSats() + "&fee=" + quote.getFeeSats() + "&total=" + quote.getTotalSats();
+        return "cashu:mint-quote?mint=" + quote.getMintUrl() + "&amount=" + quote.getAmountSats() + "&total=" + quote.getTotalSats();
       }
       return "cashu:mint-quote:unavailable";
     } catch (Throwable t) {

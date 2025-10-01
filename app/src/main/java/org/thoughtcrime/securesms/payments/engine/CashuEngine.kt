@@ -83,13 +83,14 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
     ensureInitialized()
     runCatching {
       val cdkQuote = wallet!!.mintQuote(Amount(amountSats.toULong()), "Signal top-up") as org.cashudevkit.MintQuote
-      // Map to our engine MintQuote (CDK may not expose fee; set 0 for now)
       MintQuote(
         mintUrl = DEFAULT_MINT_URL,
         amountSats = amountSats,
         feeSats = 0L,
         totalSats = amountSats,
-        expiresAtMs = System.currentTimeMillis() + 5 * 60_000
+        expiresAtMs = System.currentTimeMillis() + 5 * 60_000,
+        invoiceBolt11 = null,
+        id = null
       )
     }
   }
@@ -158,4 +159,7 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
     ensureInitialized()
     Result.success(Unit)
   }
+
+  // Temporary exposure for UI helper; in production expose a narrower surface
+  fun getCdkWalletUnsafe(): Wallet? = wallet
 }

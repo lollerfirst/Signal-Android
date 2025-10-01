@@ -42,5 +42,7 @@ data class MintQuote(
   val amountSats: Long,
   val feeSats: Long,
   val totalSats: Long,
-  val expiresAtMs: Long
+  val expiresAtMs: Long,
+  val invoiceBolt11: String?,
+  val id: String?
 )
