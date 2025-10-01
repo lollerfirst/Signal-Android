@@ -1,4 +1,5 @@
 package org.thoughtcrime.securesms.payments.preferences.addmoney;
+import org.thoughtcrime.securesms.payments.engine.MintWatcher;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -37,18 +38,61 @@ public final class PaymentsAddMoneyFragment extends LoggingFragment {
     TextView          walletAddressAbbreviated = view.findViewById(R.id.payments_add_money_abbreviated_wallet_address);
     View              copyAddress              = view.findViewById(R.id.payments_add_money_copy_address_button);
     LearnMoreTextView info                     = view.findViewById(R.id.payments_add_money_info);
+    View              qrBorder                 = view.findViewById(R.id.payments_add_money_qr_border);
+    android.widget.EditText amountInput        = view.findViewById(R.id.cashu_amount_input);
+    View              getInvoiceButton         = view.findViewById(R.id.cashu_get_invoice_button);
 
     info.setLearnMoreVisible(true);
     info.setLink(getString(R.string.PaymentsAddMoneyFragment__learn_more__information));
 
     toolbar.setNavigationOnClickListener(v -> Navigation.findNavController(v).popBackStack());
 
-    // Cashu path: show a mint quote QR/request instead of MOB address if Cashu is enabled
+    // Cashu path: inline UI (amount input + button -> show QR)
     if (SignalStore.payments().cashuEnabled()) {
-      String text = CashuMintQuoteUiHelper.getOrCreateMintQuoteQr(requireContext());
-      qrImageView.setQrText(text);
-      walletAddressAbbreviated.setText(text);
-      copyAddress.setOnClickListener(v -> copyAddressToClipboard(text));
+      qrBorder.setVisibility(View.GONE);
+      getInvoiceButton.setOnClickListener(v -> {
+        String vtext = amountInput.getText() != null ? amountInput.getText().toString().trim() : "";
+        final long sats;
+        try { sats = Long.parseLong(vtext); } catch (Throwable t) {
+          Toast.makeText(requireContext(), "Invalid amount", Toast.LENGTH_SHORT).show();
+          return;
+        }
+        if (sats <= 0L) {
+          Toast.makeText(requireContext(), "Invalid amount", Toast.LENGTH_SHORT).show();
+          return;
+        }
+        // Fetch in background
+        new Thread(() -> {
+          String text;
+          try {
+            org.thoughtcrime.securesms.payments.engine.MintQuote quote = org.thoughtcrime.securesms.payments.preferences.cashu.CashuMintQuoteUiHelper.requestMintQuote(requireContext(), sats);
+            if (quote != null && quote.getInvoiceBolt11() != null && !quote.getInvoiceBolt11().isEmpty()) {
+              text = quote.getInvoiceBolt11();
+            } else if (quote != null) {
+              text = "cashu:mint-quote?mint=" + quote.getMintUrl() + "&amount=" + quote.getAmountSats() + "&total=" + quote.getTotalSats();
+            } else {
+              text = "cashu:mint-quote:unavailable";
+            }
+          } catch (Throwable t) {
+            text = "cashu:mint-quote:error";
+          }
+          final String qrText = text;
+          requireActivity().runOnUiThread(() -> {
+            // Hide amount input and button after we have a quote
+            View amountContainer = getView().findViewById(R.id.cashu_amount_container);
+            if (amountContainer != null) amountContainer.setVisibility(View.GONE);
+            qrBorder.setVisibility(View.VISIBLE);
+            TextView walletLabel = getView().findViewById(R.id.payments_add_money_your_wallet_address);
+            if (walletLabel != null) walletLabel.setText("Your lightning invoice");
+            walletAddressAbbreviated.setText(qrText);
+            qrImageView.setQrText(qrText);
+            info.setText("To add funds, pay this lightning invoice.");
+            Toast.makeText(requireContext(), "Invoice ready", Toast.LENGTH_SHORT).show();
+          });
+        }).start();
+      });
+      copyAddress.setOnClickListener(v -> copyAddressToClipboard(walletAddressAbbreviated.getText().toString()));
+      MintWatcher.INSTANCE.start(requireContext());
       return;
     }
 
@@ -71,5 +115,57 @@ public final class PaymentsAddMoneyFragment extends LoggingFragment {
     ClipboardManager clipboard = (android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
     clipboard.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.app_name), text));
     Toast.makeText(context, R.string.PaymentsAddMoneyFragment__copied_to_clipboard, Toast.LENGTH_SHORT).show();
+  }
+
+  private void showAmountPromptAndMintQuote(@NonNull QrView qrImageView, @NonNull TextView display) {
+    final android.widget.EditText input = new android.widget.EditText(requireContext());
+    input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+    input.setHint("Amount in sats");
+
+    new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+        .setTitle("Add funds")
+        .setMessage("Enter amount in sats")
+        .setView(input)
+        .setPositiveButton(android.R.string.ok, (d, w) -> {
+          String v = input.getText().toString().trim();
+          final long sats;
+          try {
+            sats = Long.parseLong(v);
+          } catch (Throwable ignore) {
+            android.widget.Toast.makeText(requireContext(), "Invalid amount", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+          }
+          if (sats <= 0L) {
+            android.widget.Toast.makeText(requireContext(), "Invalid amount", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+          }
+          // Show immediate feedback while fetching invoice off main thread
+          display.setText("Loading invoice...");
+          qrImageView.setQrText("");
+          // Fetch the mint quote in a background thread to avoid NetworkOnMainThreadException
+          new Thread(() -> {
+            String text;
+            try {
+              org.thoughtcrime.securesms.payments.engine.MintQuote quote = org.thoughtcrime.securesms.payments.preferences.cashu.CashuMintQuoteUiHelper.requestMintQuote(requireContext(), sats);
+              if (quote != null && quote.getInvoiceBolt11() != null && !quote.getInvoiceBolt11().isEmpty()) {
+                text = quote.getInvoiceBolt11();
+              } else if (quote != null) {
+                text = "cashu:mint-quote?mint=" + quote.getMintUrl() + "&amount=" + quote.getAmountSats() + "&total=" + quote.getTotalSats();
+              } else {
+                text = "cashu:mint-quote:unavailable";
+              }
+            } catch (Throwable t) {
+              text = "cashu:mint-quote:error";
+            }
+            final String qrText = text;
+            requireActivity().runOnUiThread(() -> {
+              display.setText(qrText);
+              qrImageView.setQrText(qrText);
+              android.widget.Toast.makeText(requireContext(), "Invoice ready", android.widget.Toast.LENGTH_SHORT).show();
+            });
+          }).start();
+        })
+        .setNegativeButton(android.R.string.cancel, (d, w) -> d.dismiss())
+        .show();
   }
 }

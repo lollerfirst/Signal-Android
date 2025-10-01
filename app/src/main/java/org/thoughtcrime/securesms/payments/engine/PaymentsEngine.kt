@@ -16,6 +16,14 @@ interface PaymentsEngine {
   // Cashu-specific additions
   suspend fun requestMintQuote(amountSats: Long): Result<MintQuote>
   suspend fun createSendToken(amountSats: Long, memo: String? = null): Result<String>
+  /**
+   * Mint a paid mint quote. Implementation may accept either the quote id or the
+   * bolt11 invoice string, depending on the underlying wallet library.
+   */
+  suspend fun mintPaidQuote(secretKeyOrId: String): Result<Unit>
+
+  // New: optionally check a quote status (if engine supports it) and/or record pending
+  suspend fun recordPendingMint(quote: MintQuote) {}
 }
 
 data class Balance(

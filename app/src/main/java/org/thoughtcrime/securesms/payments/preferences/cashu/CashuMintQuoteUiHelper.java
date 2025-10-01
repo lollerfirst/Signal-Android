@@ -17,14 +17,28 @@ public final class CashuMintQuoteUiHelper {
 
   private CashuMintQuoteUiHelper() {}
 
+  /**
+   * Backwards-compatible default (10k sats). Prefer getMintQuoteQrForAmount.
+   */
   public static @NonNull String getOrCreateMintQuoteQr(@NonNull Context context) {
+    return getMintQuoteQrForAmount(context, 10_000L);
+  }
+
+  public static MintQuote requestMintQuote(@NonNull Context context, long amountSats) {
     try {
-      long amountSats = 10_000L; // TODO: wire UI amount
+      return CashuUiInteractor.requestMintQuoteBlocking(context, amountSats);
+    } catch (Throwable t) {
+      Log.w(TAG, "mint quote failed", t);
+      return null;
+    }
+  }
+
+  public static @NonNull String getMintQuoteQrForAmount(@NonNull Context context, long amountSats) {
+    try {
       MintQuote quote = CashuUiInteractor.requestMintQuoteBlocking(context, amountSats);
       if (quote != null && quote.getInvoiceBolt11() != null && !quote.getInvoiceBolt11().isEmpty()) {
         return quote.getInvoiceBolt11();
       }
-      // Fallback: still show a Cashu mint-quote placeholder
       if (quote != null) {
         return "cashu:mint-quote?mint=" + quote.getMintUrl() + "&amount=" + quote.getAmountSats() + "&total=" + quote.getTotalSats();
       }

@@ -31,6 +31,8 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
 
   private val keyManager by lazy { CashuKeyManager(appContext) }
   private val mnemonicManager by lazy { CashuMnemonicManager(appContext) }
+  private val pendingStore by lazy { PendingMintStore(appContext) }
+  private val historyStore by lazy { CashuHistoryStore(appContext) }
 
   private var db: WalletSqliteDatabase? = null
   private var wallet: Wallet? = null
@@ -52,6 +54,10 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
         db = db!!,
         config = config
       )
+
+      // Ensure we have mint keysets/info on first run
+      runCatching { wallet!!.refreshKeysets() }.onFailure { Log.w(TAG, "refreshKeysets failed during init", it) }
+      runCatching { wallet!!.getMintInfo() }.onFailure { Log.w(TAG, "getMintInfo failed during init", it) }
 
       val p2pk = keyManager.getOrCreateP2pk()
       Log.i(TAG, "Cashu wallet initialized. P2PK pub=${'$'}{p2pk.pubkeyHex.take(16)}…")
@@ -83,7 +89,7 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
     ensureInitialized()
     runCatching {
       val cdkQuote = wallet!!.mintQuote(Amount(amountSats.toULong()), "Signal top-up") as org.cashudevkit.MintQuote
-      MintQuote(
+      val quote = MintQuote(
         mintUrl = DEFAULT_MINT_URL,
         amountSats = amountSats,
         feeSats = 0L,
@@ -92,6 +98,9 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
         invoiceBolt11 = cdkQuote.request,
         id = cdkQuote.id
       )
+      // Record as pending so watcher can auto-mint when paid
+      recordPendingMint(quote)
+      quote
     }
   }
 
@@ -137,7 +146,7 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
 
   override suspend fun listHistory(offset: Int, limit: Int): List<Tx> = withContext(Dispatchers.IO) {
     ensureInitialized()
-    runCatching {
+    val onchain = runCatching {
       (wallet!!.listTransactions(null) as List<*>).drop(offset).take(limit).map { it as Transaction }.map { tx ->
         val amt = tx.amount.value.toLong()
         Tx(
@@ -148,6 +157,28 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
         )
       }
     }.getOrDefault(emptyList())
+
+    // Add pending top-ups as 0-sat placeholder entries
+    val pending = pendingStore.list().map {
+      Tx(
+        id = it.id ?: (it.invoice ?: ("pending-" + it.createdAtMs)),
+        timestampMs = it.createdAtMs,
+        amountSats = 0L,
+        memo = "Pending top-up ${it.amountSats} sat"
+      )
+    }
+
+    // Completed top-ups synthesized from local history (until CDK exposes full TX list we can map)
+    val completed = historyStore.list().map {
+      Tx(
+        id = it.id ?: ("topup-" + it.timestampMs),
+        timestampMs = it.timestampMs,
+        amountSats = it.amountSats,
+        memo = "Top-up completed"
+      )
+    }
+
+    (completed + pending + onchain).sortedByDescending { it.timestampMs }
   }
 
   override suspend fun backupExport(): EncryptedBlob = withContext(Dispatchers.IO) {
@@ -155,9 +186,38 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
     EncryptedBlob(byteArrayOf())
   }
 
+  override suspend fun mintPaidQuote(secretKeyOrId: String): Result<Unit> = withContext(Dispatchers.IO) {
+    ensureInitialized()
+    runCatching {
+      wallet!!.mint(secretKeyOrId, SplitTarget.None, null)
+      try {
+        val match = pendingStore.list().firstOrNull { it.invoice == secretKeyOrId || it.id == secretKeyOrId }
+        if (match != null) {
+          pendingStore.markMinted(match.id)
+          historyStore.add(CashuHistoryStore.CompletedTopUp(match.id, match.amountSats, System.currentTimeMillis()))
+        }
+      } catch (_: Throwable) {}
+      Unit
+    }
+  }
+
   override suspend fun backupImport(blob: EncryptedBlob): Result<Unit> = withContext(Dispatchers.IO) {
     ensureInitialized()
     Result.success(Unit)
+  }
+
+  override suspend fun recordPendingMint(quote: MintQuote) {
+    try {
+      pendingStore.add(PendingMintStore.PendingMintQuote(
+        id = quote.id,
+        invoice = quote.invoiceBolt11,
+        amountSats = quote.amountSats,
+        expiresAtMs = quote.expiresAtMs,
+        mintUrl = quote.mintUrl
+      ))
+    } catch (t: Throwable) {
+      Log.w(TAG, "Failed to record pending mint", t)
+    }
   }
 
   // Temporary exposure for UI helper; in production expose a narrower surface

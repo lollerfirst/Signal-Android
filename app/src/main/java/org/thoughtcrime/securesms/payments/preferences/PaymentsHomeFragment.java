@@ -36,6 +36,7 @@ import org.thoughtcrime.securesms.payments.FiatMoneyUtil;
 import org.thoughtcrime.securesms.payments.MoneyView;
 import org.thoughtcrime.securesms.payments.backup.RecoveryPhraseStates;
 import org.thoughtcrime.securesms.payments.backup.confirm.PaymentsRecoveryPhraseConfirmFragment;
+import org.thoughtcrime.securesms.payments.engine.MintWatcher;
 import org.thoughtcrime.securesms.payments.preferences.model.InfoCard;
 import org.thoughtcrime.securesms.payments.preferences.model.PaymentItem;
 import org.thoughtcrime.securesms.util.CommunicationActions;
@@ -55,6 +56,14 @@ public class PaymentsHomeFragment extends LoggingFragment {
   private static final String TAG = Log.tag(PaymentsHomeFragment.class);
 
   private PaymentsHomeViewModel viewModel;
+
+  // Cashu: simple sats formatter for header
+  private String formatSats(long sats) {
+    java.text.NumberFormat nf = java.text.NumberFormat.getInstance(java.util.Locale.getDefault());
+    nf.setGroupingUsed(true);
+    nf.setMaximumFractionDigits(0);
+    return nf.format(sats);
+  }
 
   public PaymentsHomeFragment() {
     super(R.layout.payments_home_fragment);
@@ -157,15 +166,24 @@ public class PaymentsHomeFragment extends LoggingFragment {
       header.setVisibility(enabled ? View.VISIBLE : View.GONE);
     });
 
-    viewModel.getBalance().observe(getViewLifecycleOwner(), balanceAmount -> {
-      balance.setMoney(balanceAmount);
-      if (SignalStore.payments().getShowSaveRecoveryPhrase() &&
-          !SignalStore.payments().getUserConfirmedMnemonic() &&
-          !balanceAmount.isEqualOrLessThanZero()) {
-        SafeNavigation.safeNavigate(NavHostFragment.findNavController(this), PaymentsHomeFragmentDirections.actionPaymentsHomeToPaymentsBackup().setRecoveryPhraseState(RecoveryPhraseStates.FIRST_TIME_NON_ZERO_BALANCE_WITH_MNEMONIC_NOT_CONFIRMED));
-        SignalStore.payments().setShowSaveRecoveryPhrase(false);
-      }
-    });
+    // Only observe MobileCoin balance when Cashu is not enabled
+    if (!viewModel.isCashuEnabled()) {
+      viewModel.getBalance().observe(getViewLifecycleOwner(), balanceAmount -> {
+        balance.setMoney(balanceAmount);
+        if (SignalStore.payments().getShowSaveRecoveryPhrase() &&
+            !SignalStore.payments().getUserConfirmedMnemonic() &&
+            !balanceAmount.isEqualOrLessThanZero()) {
+          SafeNavigation.safeNavigate(NavHostFragment.findNavController(this), PaymentsHomeFragmentDirections.actionPaymentsHomeToPaymentsBackup().setRecoveryPhraseState(RecoveryPhraseStates.FIRST_TIME_NON_ZERO_BALANCE_WITH_MNEMONIC_NOT_CONFIRMED));
+          SignalStore.payments().setShowSaveRecoveryPhrase(false);
+        }
+      });
+    } else {
+      // Cashu sats-first balance in header
+      viewModel.getCashuSatsBalance().observe(getViewLifecycleOwner(), sats -> {
+        String text = formatSats(sats) + " sat";
+        balance.setText(text);
+      });
+    }
 
     // Cashu header: when enabled, show fiat text from sats engine
     if (viewModel.isCashuEnabled()) {
@@ -182,8 +200,8 @@ public class PaymentsHomeFragment extends LoggingFragment {
       });
     }
 
-    refresh.setOnClickListener(v -> viewModel.refreshExchangeRates(true));
-    exchange.setOnClickListener(v -> viewModel.refreshExchangeRates(true));
+    refresh.setOnClickListener(v -> { viewModel.refreshExchangeRates(true); if (viewModel.isCashuEnabled()) viewModel.updateStore(); });
+    exchange.setOnClickListener(v -> { viewModel.refreshExchangeRates(true); if (viewModel.isCashuEnabled()) viewModel.updateStore(); });
 
     viewModel.getExchangeLoadState().observe(getViewLifecycleOwner(), loadState -> {
       switch (loadState) {

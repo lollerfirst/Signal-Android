@@ -17,4 +17,9 @@ object CashuUiInteractor {
   fun createSendTokenBlocking(context: Context, amountSats: Long, memo: String? = null): String? = runBlocking {
     PaymentsEngineProvider.get(context).createSendToken(amountSats, memo).getOrNull()
   }
+
+  @JvmStatic
+  fun mintPaidQuoteBlocking(context: Context, secretKeyOrId: String): Boolean = runBlocking {
+    PaymentsEngineProvider.get(context).mintPaidQuote(secretKeyOrId).isSuccess
+  }
 }

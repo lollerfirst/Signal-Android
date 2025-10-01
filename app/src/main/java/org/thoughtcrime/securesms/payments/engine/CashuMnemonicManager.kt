@@ -16,18 +16,13 @@ class CashuMnemonicManager(private val appContext: Context) {
 
   fun getOrCreateMnemonic(): String {
     if (file.exists()) return load()
-    val mnemonic = generateLocalMnemonic()
+    // Use Payments Entropy -> BIP39 mnemonic for consistency with existing keystore approach
+    val entropy = org.thoughtcrime.securesms.payments.Entropy.generateNew().bytes
+    val mnemonic = com.mobilecoin.lib.Mnemonics.bip39EntropyToMnemonic(entropy)
     val sealed = KeyStoreHelper.seal(mnemonic.toByteArray())
     val payload = SealedMnemonic(sealed = sealed.serialize())
     write(payload)
     return mnemonic
-  }
-
-  private fun generateLocalMnemonic(): String {
-    val rnd = java.security.SecureRandom()
-    val bytes = ByteArray(32)
-    rnd.nextBytes(bytes)
-    return android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
   }
 
   private fun load(): String {

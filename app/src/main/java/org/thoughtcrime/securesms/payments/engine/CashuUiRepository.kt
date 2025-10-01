@@ -20,6 +20,8 @@ class CashuUiRepository(private val appContext: Context) {
 
   suspend fun getSpendableSats(): Long = withContext(Dispatchers.IO) {
     if (!SignalStore.payments.cashuEnabled()) return@withContext 0L
+    // Each balance fetch also tries to mint any newly-paid quotes
+    try { MintWatcher.checkOnce(appContext) } catch (_: Throwable) {}
     runCatching { engine().getBalance().spendableSats }.getOrDefault(0L)
   }
 
@@ -28,7 +30,7 @@ class CashuUiRepository(private val appContext: Context) {
   suspend fun satsToFiatString(sats: Long, currency: Currency = SignalStore.payments.currentCurrency()): String = withContext(Dispatchers.IO) {
     val result = rates.satsToFiat(sats, currency)
     return@withContext result.fold(
-      onSuccess = { amount: BigDecimal -> "~ ${'$'}{amount.stripTrailingZeros().toPlainString()} ${currency.currencyCode}" },
+      onSuccess = { amount: BigDecimal -> "~ $${amount.stripTrailingZeros().toPlainString()} ${currency.currencyCode}" },
       onFailure = { _ -> "~ -- ${currency.currencyCode}" }
     )
   }
