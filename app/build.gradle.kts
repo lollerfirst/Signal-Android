@@ -523,6 +523,9 @@ dependencies {
   implementation(libs.androidx.legacy.preference)
   implementation(libs.androidx.gridlayout)
   implementation(libs.androidx.exifinterface)
+  // Cashu Dev Kit Kotlin bindings
+  implementation("org.cashudevkit:cdk-kotlin:v0.13.0")
+
   implementation(libs.androidx.compose.rxjava3)
   implementation(libs.androidx.compose.runtime.livedata)
   implementation(libs.androidx.activity.compose)
