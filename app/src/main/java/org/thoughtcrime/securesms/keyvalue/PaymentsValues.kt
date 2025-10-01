@@ -6,7 +6,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.map
 import com.mobilecoin.lib.Mnemonics
 import com.mobilecoin.lib.exceptions.BadMnemonicException
-import org.thoughtcrime.securesms.BuildConfig
+import org.signal.core.util.logging.Log
 import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.lock.v2.PinKeyboardType
 import org.thoughtcrime.securesms.payments.Balance
@@ -112,7 +112,7 @@ class PaymentsValues internal constructor(store: KeyValueStore) : SignalStoreVal
    * Applies feature flags and region restrictions to return an enum which describes the available feature set for the user.
    */
   fun cashuEnabled(): Boolean {
-    return getBoolean(CASHU_ENABLED, false)
+    return org.thoughtcrime.securesms.BuildConfig.DEBUG || getBoolean(CASHU_ENABLED, false)
   }
 
   val paymentsAvailability: PaymentsAvailability
