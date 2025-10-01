@@ -26,3 +26,6 @@ Author: Goose
 - Decision: use CDK WalletSqliteDatabase for persistence. Plan updated accordingly (to be reflected in storage section with explicit note in subsequent edit).
 - Next: add feature flag, create PaymentsEngine interface, CashuEngine skeleton, Coinbase RatesProvider, and adjust PaymentsAvailability to expose Cashu when enabled.
 - Added CoinbaseRatesProvider implementation to fetch BTC spot price and sats->fiat conversion helper. Not yet integrated in UI.
+
+### 2025-10-01 (cont.)
+- Add CashuUiRepository to bridge engine sats balance and show fiat using Coinbase FX; provides blocking helpers for legacy UI. No UI wiring yet.
