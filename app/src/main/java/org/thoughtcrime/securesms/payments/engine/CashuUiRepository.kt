@@ -33,5 +33,5 @@ class CashuUiRepository(private val appContext: Context) {
     )
   }
 
-  fun satsToFiatStringBlocking(sats: Long, currency: Currency = SignalStore.payments.currentCurrency()): String = runBlocking { satsToFiatString(sats, currency) }
+  fun satsToFiatStringBlocking(sats: Long): String = runBlocking { satsToFiatString(sats) }
 }

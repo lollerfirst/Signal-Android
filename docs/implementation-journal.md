@@ -11,7 +11,7 @@ Author: Goose
   - [x] Add docs/implementation-journal.md
   - [x] Add Cashu enabled flag in PaymentsValues (key: cashu_enabled) and availability logic ignoring geo
   - [x] Add PaymentsEngine abstraction and provider; add CashuEngine skeleton and MobileCoinEngineAdapter stub
-  - [ ] Wire PaymentsHomeViewModel and related screens to use PaymentsEngineProvider
+  - [x] Wire PaymentsHomeViewModel and PaymentsHomeFragment minimally: expose Cashu sats and show fiat estimate in header when flag is enabled
   - [x] Add Coinbase RatesProvider and sats-first display adjustments (provider added, UI wiring pending)
   - [ ] Implement CDK WalletSqliteDatabase initialization and P2PK key management in CashuEngine
   - [ ] Implement createRequest with default mint + P2PK
@@ -28,4 +28,5 @@ Author: Goose
 - Added CoinbaseRatesProvider implementation to fetch BTC spot price and sats->fiat conversion helper. Not yet integrated in UI.
 
 ### 2025-10-01 (cont.)
-- Add CashuUiRepository to bridge engine sats balance and show fiat using Coinbase FX; provides blocking helpers for legacy UI. No UI wiring yet.
+- Add CashuUiRepository to bridge engine sats balance and show fiat using Coinbase FX; provides blocking helpers for legacy UI.
+- Wire step: PaymentsHomeViewModel exposes cashu sats LiveData and fiat string; PaymentsHomeFragment displays fiat string when Cashu is enabled. Build succeeds for :Signal-Android:assembleDebug.
