@@ -14,19 +14,23 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
   companion object {
     private val TAG = Log.tag(CashuEngine::class.java)
     private const val DEFAULT_MINT_URL = "https://mint.chorus.community"
+    private const val DB_NAME = "cashu-wallet.db"
   }
 
   // lateinit var wallet: CdkWallet // Placeholder for CDK wallet type
   // lateinit var db: WalletSqliteDatabase
+  private val keyManager by lazy { CashuKeyManager(appContext) }
 
   private var initialized = false
 
   private suspend fun ensureInitialized() = withContext(Dispatchers.IO) {
     if (initialized) return@withContext
     try {
-      // TODO: Initialize CDK WalletSqliteDatabase and wallet, generate/load P2PK keys
-      // db = WalletSqliteDatabase.open(appContext, "cashu-wallet.db")
-      // wallet = CdkWallet(db, DEFAULT_MINT_URL, loadOrCreateP2pkKeypair())
+      // TODO: Initialize CDK WalletSqliteDatabase and wallet
+      // db = WalletSqliteDatabase.open(appContext, DB_NAME)
+      val p2pk = keyManager.getOrCreateP2pk()
+      Log.i(TAG, "Cashu P2PK pub=${'$'}{p2pk.pubkeyHex.take(16)}…")
+      // wallet = CdkWallet(db, DEFAULT_MINT_URL, p2pk)
       initialized = true
     } catch (e: Throwable) {
       Log.w(TAG, "Failed to init CashuEngine", e)
@@ -52,13 +56,13 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
     ensureInitialized()
     // TODO: Build Cashu payment request embedding DEFAULT_MINT_URL and our P2PK pubkey
     // return wallet.createPaymentRequest(amountSats, memo)
-    "cashu:request:TODO"
+    val pub = keyManager.getOrCreateP2pk().pubkeyHex
+    "cashu:request?mint=${'$'}DEFAULT_MINT_URL&pub=${'$'}pub&amount=${'$'}{amountSats ?: 0}"
   }
 
   override suspend fun send(toTokenRequest: String?, amountSats: Long, memo: String?): Result<TxId> = withContext(Dispatchers.IO) {
     ensureInitialized()
     // TODO: Split proofs, create token, optionally p2pk output if the recipient provided a pubkey in request
-    // val txId = wallet.send(toTokenRequest, amountSats, memo)
     Result.success(TxId("TODO"))
   }
 
