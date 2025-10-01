@@ -121,11 +121,11 @@ public class CreatePaymentFragment extends LoggingFragment {
 
     pay.setOnClickListener(v -> {
       if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
-        // Cashu: directly construct a token from the entered amount and place it in the clipboard for sending as a message
-        long sats = org.thoughtcrime.securesms.payments.preferences.cashu.CashuSendHelper.getCurrentAmountSats(viewModel);
+        long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(viewModel);
         String token = org.thoughtcrime.securesms.payments.preferences.cashu.CashuSendHelper.createTokenBlocking(requireContext(), sats, viewModel.getNote().getValue());
-        org.thoughtcrime.securesms.util.CommunicationActions.copyToClipboard(requireContext(), token);
-        Toast.makeText(requireContext(), R.string.PaymentsHomeFragment__payments_deactivated, Toast.LENGTH_SHORT).show();
+        android.content.ClipboardManager clipboard = (android.content.ClipboardManager) requireContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+        clipboard.setPrimaryClip(android.content.ClipData.newPlainText(getString(R.string.app_name), token));
+        android.widget.Toast.makeText(requireContext(), "Cashu token copied", android.widget.Toast.LENGTH_SHORT).show();
         return;
       }
       NavDirections directions = CreatePaymentFragmentDirections.actionCreatePaymentFragmentToConfirmPaymentFragment(viewModel.getCreatePaymentDetails())

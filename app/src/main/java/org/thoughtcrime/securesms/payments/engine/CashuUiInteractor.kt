@@ -9,12 +9,12 @@ import kotlinx.coroutines.runBlocking
  */
 object CashuUiInteractor {
   @JvmStatic
-  fun requestMintQuoteBlocking(context: Context, amountSats: Long): Result<MintQuote> = runBlocking {
-    PaymentsEngineProvider.get(context).requestMintQuote(amountSats)
+  fun requestMintQuoteBlocking(context: Context, amountSats: Long): MintQuote? = runBlocking {
+    PaymentsEngineProvider.get(context).requestMintQuote(amountSats).getOrNull()
   }
 
   @JvmStatic
-  fun createSendTokenBlocking(context: Context, amountSats: Long, memo: String? = null): Result<String> = runBlocking {
-    PaymentsEngineProvider.get(context).createSendToken(amountSats, memo)
+  fun createSendTokenBlocking(context: Context, amountSats: Long, memo: String? = null): String? = runBlocking {
+    PaymentsEngineProvider.get(context).createSendToken(amountSats, memo).getOrNull()
   }
 }

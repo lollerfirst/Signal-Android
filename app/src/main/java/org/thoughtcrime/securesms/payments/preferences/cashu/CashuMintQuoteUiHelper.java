@@ -20,13 +20,9 @@ public final class CashuMintQuoteUiHelper {
   public static @NonNull String getOrCreateMintQuoteQr(@NonNull Context context) {
     try {
       long amountSats = 10_000L; // stub: 10k sats; next step: allow user to specify
-      var result = CashuUiInteractor.requestMintQuoteBlocking(context, amountSats);
-      if (result.isSuccess()) {
-        MintQuote quote = result.getOrNull();
-        if (quote != null) {
-          // Placeholder QR string — replace with proper Cashu/NUT format when implementing real flows
-          return "cashu:mint-quote?mint=" + quote.getMintUrl() + "&amount=" + quote.getAmountSats() + "&fee=" + quote.getFeeSats() + "&total=" + quote.getTotalSats();
-        }
+      MintQuote quote = CashuUiInteractor.requestMintQuoteBlocking(context, amountSats);
+      if (quote != null) {
+        return "cashu:mint-quote?mint=" + quote.getMintUrl() + "&amount=" + quote.getAmountSats() + "&fee=" + quote.getFeeSats() + "&total=" + quote.getTotalSats();
       }
       return "cashu:mint-quote:unavailable";
     } catch (Throwable t) {
