@@ -22,6 +22,7 @@ import org.thoughtcrime.securesms.payments.Payment;
 import org.thoughtcrime.securesms.payments.UnreadPaymentsRepository;
 import org.thoughtcrime.securesms.payments.currency.CurrencyExchange;
 import org.thoughtcrime.securesms.payments.currency.CurrencyExchangeRepository;
+import org.thoughtcrime.securesms.payments.engine.CashuUiRepository;
 import org.thoughtcrime.securesms.payments.preferences.model.InProgress;
 import org.thoughtcrime.securesms.payments.preferences.model.InfoCard;
 import org.thoughtcrime.securesms.payments.preferences.model.IntroducingPayments;
@@ -58,6 +59,11 @@ public class PaymentsHomeViewModel extends ViewModel {
   private final UnreadPaymentsRepository   unreadPaymentsRepository;
   private final LiveData<LoadState>        exchangeLoadState;
 
+  // Cashu additions
+  private final boolean cashuEnabled;
+  private final CashuUiRepository cashuUiRepository;
+  private final LiveData<Long> cashuSatsBalance;
+
   PaymentsHomeViewModel(@NonNull PaymentsHomeRepository paymentsHomeRepository,
                         @NonNull PaymentsRepository paymentsRepository,
                         @NonNull CurrencyExchangeRepository currencyExchangeRepository)
@@ -76,6 +82,10 @@ public class PaymentsHomeViewModel extends ViewModel {
     this.enclaveFailure             = LiveDataUtil.mapDistinct(SignalStore.payments().enclaveFailure(), isFailure -> isFailure);
     this.store.update(paymentsRepository.getRecentPayments(), this::updateRecentPayments);
 
+    this.cashuEnabled               = SignalStore.payments().cashuEnabled();
+    this.cashuUiRepository          = new CashuUiRepository(AppDependencies.getApplication());
+    this.cashuSatsBalance           = LiveDataUtil.mapAsync(store.getStateLiveData(), s -> cashuUiRepository.getSpendableSatsBlocking());
+
     LiveData<CurrencyExchange.ExchangeRate> liveExchangeRate = LiveDataUtil.combineLatest(SignalStore.payments().liveCurrentCurrency(),
                                                                                           LiveDataUtil.mapDistinct(store.getStateLiveData(), PaymentsHomeState::getCurrencyExchange),
                                                                                           (currency, exchange) -> exchange.getExchangeRate(currency));
@@ -93,6 +103,10 @@ public class PaymentsHomeViewModel extends ViewModel {
     super.onCleared();
     store.clear();
   }
+
+  boolean isCashuEnabled() { return cashuEnabled; }
+
+  @NonNull LiveData<Long> getCashuSatsBalance() { return cashuSatsBalance; }
 
   private static PaymentsHomeState.PaymentsState getPaymentsState() {
     PaymentsValues paymentsValues = SignalStore.payments();
