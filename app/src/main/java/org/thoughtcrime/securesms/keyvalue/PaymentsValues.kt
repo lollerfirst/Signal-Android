@@ -33,6 +33,7 @@ class PaymentsValues internal constructor(store: KeyValueStore) : SignalStoreVal
     private val TAG = Log.tag(PaymentsValues::class.java)
 
     private const val MOB_PAYMENTS_ENABLED = "mob_payments_enabled"
+    private const val CASHU_ENABLED = "cashu_enabled"
     private const val PAYMENTS_ENTROPY = "payments_entropy"
     private const val MOB_LEDGER = "mob_ledger"
     private const val PAYMENTS_CURRENT_CURRENCY = "payments_current_currency"
@@ -110,10 +111,18 @@ class PaymentsValues internal constructor(store: KeyValueStore) : SignalStoreVal
   /**
    * Applies feature flags and region restrictions to return an enum which describes the available feature set for the user.
    */
+  fun cashuEnabled(): Boolean {
+    return getBoolean(CASHU_ENABLED, false)
+  }
+
   val paymentsAvailability: PaymentsAvailability
     get() {
       if (!SignalStore.account.isRegistered) {
         return PaymentsAvailability.NOT_IN_REGION
+      }
+      // Cashu path: ignore region/compliance; show full send/receive when enabled
+      if (cashuEnabled()) {
+        return PaymentsAvailability.WITHDRAW_AND_SEND
       }
       return if (RemoteConfig.payments) {
         if (mobileCoinPaymentsEnabled()) {
@@ -167,6 +176,16 @@ class PaymentsValues internal constructor(store: KeyValueStore) : SignalStoreVal
       val paymentsEntropy = paymentsEntropy ?: throw IllegalStateException("Entropy has not been set")
       return paymentsEntropy.asMnemonic()
     }
+  @WorkerThread
+  fun setCashuEnabled(enabled: Boolean) {
+    if (cashuEnabled() == enabled) return
+    store.beginWrite()
+      .putBoolean(CASHU_ENABLED, enabled)
+      .commit()
+    SignalDatabase.recipients.markNeedsSync(Recipient.self().id)
+    StorageSyncHelper.scheduleSyncForDataChange()
+  }
+
 
   /**
    * True if a local entropy is set, regardless of whether payments is currently enabled.
