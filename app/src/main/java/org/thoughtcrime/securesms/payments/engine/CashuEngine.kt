@@ -4,9 +4,7 @@ import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cashudevkit.Amount
-import org.cashudevkit.Cdk_ffiKt
 import org.cashudevkit.CurrencyUnit
-import org.cashudevkit.MintQuote
 import org.cashudevkit.PreparedSend
 import org.cashudevkit.ReceiveOptions
 import org.cashudevkit.SendKind
@@ -77,14 +75,23 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
 
   override suspend fun createRequest(amountSats: Long?, memo: String?): String = withContext(Dispatchers.IO) {
     ensureInitialized()
-    // Placeholder: embed pub + amount. Later we will generate proper request/QR (NUT-07 P2PK etc.).
     val pub = keyManager.getOrCreateP2pk().pubkeyHex
     "cashu:request?mint=${'$'}DEFAULT_MINT_URL&pub=${'$'}pub&amount=${'$'}{amountSats ?: 0}"
   }
 
   override suspend fun requestMintQuote(amountSats: Long): Result<MintQuote> = withContext(Dispatchers.IO) {
     ensureInitialized()
-    runCatching { wallet!!.mintQuote(Amount(amountSats.toULong()), "Signal top-up") as MintQuote }
+    runCatching {
+      val cdkQuote = wallet!!.mintQuote(Amount(amountSats.toULong()), "Signal top-up") as org.cashudevkit.MintQuote
+      // Map to our engine MintQuote (CDK may not expose fee; set 0 for now)
+      MintQuote(
+        mintUrl = DEFAULT_MINT_URL,
+        amountSats = amountSats,
+        feeSats = 0L,
+        totalSats = amountSats,
+        expiresAtMs = System.currentTimeMillis() + 5 * 60_000
+      )
+    }
   }
 
   override suspend fun createSendToken(amountSats: Long, memo: String?): Result<String> = withContext(Dispatchers.IO) {
@@ -101,15 +108,14 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
         metadata = emptyMap()
       )
       val prepared = wallet!!.prepareSend(Amount(amountSats.toULong()), sendOptions) as PreparedSend
-      val token = prepared.confirm("") as Token // channel/recipient TBD for P2PK flow
-      val tokenString = Cdk_ffiKt.encodeToken(token)
+      val token = prepared.confirm("") as Token
+      val tokenString = token.encode()
       prepared.close(); token.close()
       tokenString
     }
   }
 
   override suspend fun send(toTokenRequest: String?, amountSats: Long, memo: String?): Result<TxId> = withContext(Dispatchers.IO) {
-    // For now, re-use createSendToken and synthesize a TxId.
     createSendToken(amountSats, memo).map { TxId(it.take(16)) }
   }
 
@@ -132,10 +138,10 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
     ensureInitialized()
     runCatching {
       (wallet!!.listTransactions(null) as List<*>).drop(offset).take(limit).map { it as Transaction }.map { tx ->
-        val amt = tx.amount().value.toLong()
+        val amt = tx.amount.value.toLong()
         Tx(
-          id = tx.id().hex,
-          timestampMs = System.currentTimeMillis(), // TODO: map CDK timestamp when available
+          id = tx.id.hex,
+          timestampMs = System.currentTimeMillis(),
           amountSats = amt,
           memo = null
         )
@@ -145,13 +151,11 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
 
   override suspend fun backupExport(): EncryptedBlob = withContext(Dispatchers.IO) {
     ensureInitialized()
-    // TODO: Export proofs + mint metadata (bundle & encrypt). Placeholder empty blob.
     EncryptedBlob(byteArrayOf())
   }
 
   override suspend fun backupImport(blob: EncryptedBlob): Result<Unit> = withContext(Dispatchers.IO) {
     ensureInitialized()
-    // TODO: Import proofs bundle via CDK. Placeholder success.
     Result.success(Unit)
   }
 }

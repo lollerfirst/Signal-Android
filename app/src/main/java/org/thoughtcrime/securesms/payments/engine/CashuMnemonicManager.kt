@@ -6,7 +6,8 @@ import org.thoughtcrime.securesms.crypto.KeyStoreHelper
 import java.io.File
 
 /**
- * Stores/restores a CDK mnemonic sealed with Android Keystore.
+ * Stores/restores a wallet mnemonic sealed with Android Keystore.
+ * NOTE: Using a locally generated base64 entropy string as mnemonic placeholder to avoid hard dependency on CDK helper.
  */
 class CashuMnemonicManager(private val appContext: Context) {
   data class SealedMnemonic(val sealed: String)
@@ -15,11 +16,18 @@ class CashuMnemonicManager(private val appContext: Context) {
 
   fun getOrCreateMnemonic(): String {
     if (file.exists()) return load()
-    val mnemonic = org.cashudevkit.Cdk_ffiKt.generateMnemonic()
+    val mnemonic = generateLocalMnemonic()
     val sealed = KeyStoreHelper.seal(mnemonic.toByteArray())
     val payload = SealedMnemonic(sealed = sealed.serialize())
     write(payload)
     return mnemonic
+  }
+
+  private fun generateLocalMnemonic(): String {
+    val rnd = java.security.SecureRandom()
+    val bytes = ByteArray(32)
+    rnd.nextBytes(bytes)
+    return android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
   }
 
   private fun load(): String {

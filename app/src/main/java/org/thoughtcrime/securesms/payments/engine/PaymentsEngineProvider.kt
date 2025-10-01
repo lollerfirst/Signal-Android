@@ -1,6 +1,7 @@
 package org.thoughtcrime.securesms.payments.engine
 
 import android.content.Context
+import org.thoughtcrime.securesms.BuildConfig
 import org.thoughtcrime.securesms.keyvalue.SignalStore
 
 object PaymentsEngineProvider {
@@ -11,7 +12,7 @@ object PaymentsEngineProvider {
     val existing = engine
     if (existing != null) return existing
 
-    val enabled = SignalStore.payments.cashuEnabled()
+    val enabled = BuildConfig.DEBUG || SignalStore.payments.cashuEnabled()
     val created = if (enabled) CashuEngine(context.applicationContext) else MobileCoinEngineAdapter(context.applicationContext)
     engine = created
     return created
