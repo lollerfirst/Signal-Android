@@ -167,13 +167,20 @@ public class PaymentsHomeFragment extends LoggingFragment {
       }
     });
 
-    viewModel.getExchange().observe(getViewLifecycleOwner(), amount -> {
-      if (amount != null) {
-        exchange.setText(FiatMoneyUtil.format(getResources(), amount));
-      } else {
-        exchange.setText(R.string.PaymentsHomeFragment__unknown_amount);
-      }
-    });
+    // Cashu header: when enabled, show fiat text from sats engine
+    if (viewModel.isCashuEnabled()) {
+      viewModel.getCashuFiatText().observe(getViewLifecycleOwner(), fiatText -> {
+        exchange.setText(fiatText);
+      });
+    } else {
+      viewModel.getExchange().observe(getViewLifecycleOwner(), amount -> {
+        if (amount != null) {
+          exchange.setText(FiatMoneyUtil.format(getResources(), amount));
+        } else {
+          exchange.setText(R.string.PaymentsHomeFragment__unknown_amount);
+        }
+      });
+    }
 
     refresh.setOnClickListener(v -> viewModel.refreshExchangeRates(true));
     exchange.setOnClickListener(v -> viewModel.refreshExchangeRates(true));
