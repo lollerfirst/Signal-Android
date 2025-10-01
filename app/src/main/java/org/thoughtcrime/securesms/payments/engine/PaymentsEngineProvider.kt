@@ -6,6 +6,7 @@ import org.thoughtcrime.securesms.keyvalue.SignalStore
 object PaymentsEngineProvider {
   @Volatile private var engine: PaymentsEngine? = null
 
+  @JvmStatic
   fun get(context: Context): PaymentsEngine {
     val existing = engine
     if (existing != null) return existing
@@ -16,6 +17,7 @@ object PaymentsEngineProvider {
     return created
   }
 
+  @JvmStatic
   fun reset() {
     engine = null
   }
