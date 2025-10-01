@@ -12,6 +12,10 @@ interface PaymentsEngine {
   suspend fun listHistory(offset: Int, limit: Int): List<Tx>
   suspend fun backupExport(): EncryptedBlob
   suspend fun backupImport(blob: EncryptedBlob): Result<Unit>
+
+  // Cashu-specific additions
+  suspend fun requestMintQuote(amountSats: Long): Result<MintQuote>
+  suspend fun createSendToken(amountSats: Long, memo: String? = null): Result<String>
 }
 
 data class Balance(
@@ -31,3 +35,12 @@ data class Tx(
 )
 
 data class EncryptedBlob(val bytes: ByteArray)
+
+// Cashu mint quote (simplified)
+data class MintQuote(
+  val mintUrl: String,
+  val amountSats: Long,
+  val feeSats: Long,
+  val totalSats: Long,
+  val expiresAtMs: Long
+)

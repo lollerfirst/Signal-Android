@@ -85,4 +85,18 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
     // TODO: Import encrypted bundle via CDK
     Result.success(Unit)
   }
+
+  // New Cashu specifics
+  override suspend fun requestMintQuote(amountSats: Long): Result<MintQuote> = withContext(Dispatchers.IO) {
+    ensureInitialized()
+    // TODO: Call CDK/mint API to fetch quote; this is a stub value for now
+    val fee = (amountSats * 5) / 10_000 // 0.05% stub
+    Result.success(MintQuote(DEFAULT_MINT_URL, amountSats, fee, amountSats + fee, System.currentTimeMillis() + 5 * 60_000))
+  }
+
+  override suspend fun createSendToken(amountSats: Long, memo: String?): Result<String> = withContext(Dispatchers.IO) {
+    ensureInitialized()
+    // TODO: Use wallet to split proofs and construct a token string for amountSats
+    Result.success("cashu:token:TODO:$amountSats")
+  }
 }

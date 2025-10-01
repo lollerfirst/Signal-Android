@@ -120,6 +120,14 @@ public class CreatePaymentFragment extends LoggingFragment {
     addNote.setOnClickListener(v -> SafeNavigation.safeNavigate(Navigation.findNavController(v), R.id.action_createPaymentFragment_to_editPaymentNoteFragment));
 
     pay.setOnClickListener(v -> {
+      if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
+        // Cashu: directly construct a token from the entered amount and place it in the clipboard for sending as a message
+        long sats = org.thoughtcrime.securesms.payments.preferences.cashu.CashuSendHelper.getCurrentAmountSats(viewModel);
+        String token = org.thoughtcrime.securesms.payments.preferences.cashu.CashuSendHelper.createTokenBlocking(requireContext(), sats, viewModel.getNote().getValue());
+        org.thoughtcrime.securesms.util.CommunicationActions.copyToClipboard(requireContext(), token);
+        Toast.makeText(requireContext(), R.string.PaymentsHomeFragment__payments_deactivated, Toast.LENGTH_SHORT).show();
+        return;
+      }
       NavDirections directions = CreatePaymentFragmentDirections.actionCreatePaymentFragmentToConfirmPaymentFragment(viewModel.getCreatePaymentDetails())
                                                                 .setFinishOnConfirm(arguments.getFinishOnConfirm());
       SafeNavigation.safeNavigate(Navigation.findNavController(v), directions);
