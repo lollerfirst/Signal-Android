@@ -63,6 +63,7 @@ public class PaymentsHomeViewModel extends ViewModel {
   private final boolean cashuEnabled;
   private final CashuUiRepository cashuUiRepository;
   private final LiveData<Long> cashuSatsBalance;
+  private final LiveData<String> cashuFiatText;
 
   PaymentsHomeViewModel(@NonNull PaymentsHomeRepository paymentsHomeRepository,
                         @NonNull PaymentsRepository paymentsRepository,
@@ -85,6 +86,7 @@ public class PaymentsHomeViewModel extends ViewModel {
     this.cashuEnabled               = SignalStore.payments().cashuEnabled();
     this.cashuUiRepository          = new CashuUiRepository(AppDependencies.getApplication());
     this.cashuSatsBalance           = LiveDataUtil.mapAsync(store.getStateLiveData(), s -> cashuUiRepository.getSpendableSatsBlocking());
+    this.cashuFiatText              = LiveDataUtil.mapAsync(this.cashuSatsBalance, sats -> cashuUiRepository.satsToFiatStringBlocking(sats));
 
     LiveData<CurrencyExchange.ExchangeRate> liveExchangeRate = LiveDataUtil.combineLatest(SignalStore.payments().liveCurrentCurrency(),
                                                                                           LiveDataUtil.mapDistinct(store.getStateLiveData(), PaymentsHomeState::getCurrencyExchange),
@@ -107,6 +109,8 @@ public class PaymentsHomeViewModel extends ViewModel {
   boolean isCashuEnabled() { return cashuEnabled; }
 
   @NonNull LiveData<Long> getCashuSatsBalance() { return cashuSatsBalance; }
+
+  @NonNull LiveData<String> getCashuFiatText() { return cashuFiatText; }
 
   private static PaymentsHomeState.PaymentsState getPaymentsState() {
     PaymentsValues paymentsValues = SignalStore.payments();
