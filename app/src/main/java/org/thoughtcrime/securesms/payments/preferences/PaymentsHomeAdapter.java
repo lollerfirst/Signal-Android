@@ -31,6 +31,7 @@ public class PaymentsHomeAdapter extends MappingAdapter {
     registerFactory(SettingHeader.Item.class, SettingHeader.ViewHolder::new, R.layout.base_settings_header_item);
     registerFactory(SeeAll.class, p -> new SeeAllViewHolder(p, callbacks), R.layout.payments_home_see_all_item);
     registerFactory(CashuActivityItem.class, CashuActivityViewHolder::new, R.layout.cashu_activity_item);
+    registerFactory(InfoCard.class, p -> new InfoCardViewHolder(p, callbacks), R.layout.payment_info_card);
   }
 
   public interface Callbacks {

@@ -2,6 +2,12 @@ package org.thoughtcrime.securesms.payments.preferences;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.util.Pair;
+
+import androidx.lifecycle.Observer;
+
+import androidx.lifecycle.MediatorLiveData;
+
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Transformations;
 import androidx.lifecycle.ViewModel;
@@ -13,10 +19,7 @@ import org.signal.core.util.logging.Log;
 import org.signal.core.util.money.FiatMoney;
 import org.thoughtcrime.securesms.R;
 import org.thoughtcrime.securesms.payments.preferences.model.CashuActivityItem;
-import java.util.Collections;
 import java.util.ArrayList;
-
-import java.util.concurrent.Executors;
 
 import org.thoughtcrime.securesms.components.settings.SettingHeader;
 import org.thoughtcrime.securesms.dependencies.AppDependencies;
@@ -68,8 +71,8 @@ public class PaymentsHomeViewModel extends ViewModel {
   private final boolean cashuEnabled;
   private final CashuUiRepository cashuUiRepository;
   private final LiveData<Long> cashuSatsBalance;
-  // Cashu recent activity cache (loaded async)
-  private volatile java.util.List<CashuActivityItem> recentCashuItems = java.util.Collections.emptyList();
+  private final LiveData<String> cashuFiatText;
+  private final LiveData<List<CashuActivityItem>> cashuRecentActivity;
 
   PaymentsHomeViewModel(@NonNull PaymentsHomeRepository paymentsHomeRepository,
                         @NonNull PaymentsRepository paymentsRepository,
@@ -80,7 +83,7 @@ public class PaymentsHomeViewModel extends ViewModel {
     this.unreadPaymentsRepository   = new UnreadPaymentsRepository();
     this.store                      = new Store<>(new PaymentsHomeState(getPaymentsState()));
     this.balance                    = LiveDataUtil.mapDistinct(SignalStore.payments().liveMobileCoinBalance(), Balance::getFullAmount);
-    this.list                       = Transformations.map(store.getStateLiveData(), this::createList);
+
     this.paymentsEnabled            = LiveDataUtil.mapDistinct(store.getStateLiveData(), state -> state.getPaymentsState() == PaymentsHomeState.PaymentsState.ACTIVATED);
     this.exchange                   = LiveDataUtil.mapDistinct(store.getStateLiveData(), PaymentsHomeState::getExchangeAmount);
     this.exchangeLoadState          = LiveDataUtil.mapDistinct(store.getStateLiveData(), PaymentsHomeState::getExchangeRateLoadState);
@@ -93,6 +96,31 @@ public class PaymentsHomeViewModel extends ViewModel {
     this.cashuUiRepository          = new CashuUiRepository(AppDependencies.getApplication());
     this.cashuSatsBalance           = LiveDataUtil.mapAsync(store.getStateLiveData(), s -> cashuUiRepository.getSpendableSatsBlocking());
     this.cashuFiatText              = LiveDataUtil.mapAsync(this.cashuSatsBalance, sats -> cashuUiRepository.satsToFiatStringBlocking(sats));
+    this.cashuRecentActivity        = LiveDataUtil.mapAsync(store.getStateLiveData(), s -> {
+      // Fetch and map Cashu history off main thread; use larger limit to ensure we find synthetic items
+      try {
+        java.util.List<org.thoughtcrime.securesms.payments.engine.Tx> txs = org.thoughtcrime.securesms.payments.engine.CashuUiInteractor.listHistoryBlocking(AppDependencies.getApplication(), 0, 50);
+        java.util.List<CashuActivityItem> items = new ArrayList<>();
+        for (org.thoughtcrime.securesms.payments.engine.Tx tx : txs) {
+          String memo = tx.getMemo();
+          if (memo == null) continue;
+          if (memo.startsWith("Pending top-up")) {
+            items.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), tx.getAmountSats(), CashuActivityItem.State.PENDING));
+          } else if (memo.startsWith("Top-up completed")) {
+            items.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), tx.getAmountSats(), CashuActivityItem.State.COMPLETED));
+          }
+        }
+        return items;
+      } catch (Throwable t) {
+        return java.util.Collections.emptyList();
+      }
+    });
+
+
+    // Build UI list whenever either store state or Cashu activity changes
+    androidx.lifecycle.LiveData<androidx.core.util.Pair<PaymentsHomeState, java.util.List<CashuActivityItem>>> combined =
+        org.thoughtcrime.securesms.util.livedata.LiveDataUtil.combineLatest(store.getStateLiveData(), cashuRecentActivity, androidx.core.util.Pair::new);
+    this.list = androidx.lifecycle.Transformations.map(combined, pair -> createList(pair.first, pair.second));
 
     LiveData<CurrencyExchange.ExchangeRate> liveExchangeRate = LiveDataUtil.combineLatest(SignalStore.payments().liveCurrentCurrency(),
                                                                                           LiveDataUtil.mapDistinct(store.getStateLiveData(), PaymentsHomeState::getCurrencyExchange),
@@ -185,7 +213,7 @@ public class PaymentsHomeViewModel extends ViewModel {
     }
   }
 
-  private @NonNull MappingModelList createList(@NonNull PaymentsHomeState state) {
+  private @NonNull MappingModelList createList(@NonNull PaymentsHomeState state, @Nullable List<CashuActivityItem> cashuItems) {
     MappingModelList list = new MappingModelList();
 
     if (state.getPaymentsState() == PaymentsHomeState.PaymentsState.ACTIVATED) {
@@ -196,22 +224,13 @@ public class PaymentsHomeViewModel extends ViewModel {
 
       // Cashu: show pending and completed top-ups (synthetic) first
       if (cashuEnabled) {
-        try {
-          java.util.List<org.thoughtcrime.securesms.payments.engine.Tx> txs = org.thoughtcrime.securesms.payments.engine.CashuUiInteractor.listHistoryBlocking(AppDependencies.getApplication(), 0, 50);
-          java.util.List<CashuActivityItem> cashuItems = new ArrayList<>();
-          for (org.thoughtcrime.securesms.payments.engine.Tx tx : txs) {
-            if (tx.getMemo() == null) continue;
-            if (tx.getMemo().startsWith("Pending top-up")) {
-              cashuItems.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), tx.getAmountSats(), CashuActivityItem.State.PENDING));
-            } else if (tx.getMemo().startsWith("Top-up completed")) {
-              cashuItems.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), tx.getAmountSats(), CashuActivityItem.State.COMPLETED));
-            }
-          }
-          // Add up to maxItems from Cashu
+        if (cashuItems == null) {
+          // Still loading in background; we'll show InProgress below
+        } else if (!cashuItems.isEmpty()) {
           int take = Math.min(maxItems - added, cashuItems.size());
           for (int i = 0; i < take; i++) { list.add(cashuItems.get(i)); }
           added += take;
-        } catch (Throwable ignore) {}
+        }
       }
 
       // Then fill remaining slots with legacy PaymentItems
@@ -222,7 +241,8 @@ public class PaymentsHomeViewModel extends ViewModel {
         added += take;
       }
 
-      if (!state.isRecentPaymentsLoaded()) {
+      if (!state.isRecentPaymentsLoaded() || (cashuEnabled && cashuItems == null)) {
+        // Show loading if legacy payments not loaded yet OR cashu items still loading
         list.add(new InProgress());
       } else if (added == 0) {
         list.add(new NoRecentActivity());
