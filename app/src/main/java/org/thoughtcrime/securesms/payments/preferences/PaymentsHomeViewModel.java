@@ -25,10 +25,9 @@ import org.thoughtcrime.securesms.payments.currency.CurrencyExchangeRepository;
 import org.thoughtcrime.securesms.payments.engine.CashuUiRepository;
 import org.thoughtcrime.securesms.payments.preferences.model.InProgress;
 import org.thoughtcrime.securesms.payments.preferences.model.InfoCard;
+import org.thoughtcrime.securesms.payments.preferences.model.PaymentItem;
 import org.thoughtcrime.securesms.payments.preferences.model.IntroducingPayments;
 import org.thoughtcrime.securesms.payments.preferences.model.NoRecentActivity;
-import org.thoughtcrime.securesms.payments.preferences.model.PaymentItem;
-import org.thoughtcrime.securesms.payments.preferences.model.SeeAll;
 import org.thoughtcrime.securesms.util.AsynchronousCallback;
 import org.thoughtcrime.securesms.util.SingleLiveEvent;
 import org.thoughtcrime.securesms.util.adapter.mapping.MappingModelList;
@@ -183,12 +182,27 @@ public class PaymentsHomeViewModel extends ViewModel {
     MappingModelList list = new MappingModelList();
 
     if (state.getPaymentsState() == PaymentsHomeState.PaymentsState.ACTIVATED) {
+      list.add(new SettingHeader.Item(R.string.PaymentsHomeFragment__recent_activity));
+
+      // Cashu: show pending and completed top-ups from engine synthetic list when sats path is enabled
+      if (cashuEnabled) {
+        try {
+          org.thoughtcrime.securesms.payments.engine.PaymentsEngine engine = org.thoughtcrime.securesms.payments.engine.PaymentsEngineProvider.get(AppDependencies.getApplication());
+          java.util.List<org.thoughtcrime.securesms.payments.engine.Tx> txs = org.thoughtcrime.securesms.payments.engine.CashuUiInteractor.listHistoryBlocking(AppDependencies.getApplication(), 0, 50);
+          java.util.List<CashuActivityItem> items = new ArrayList<>();
+          for (org.thoughtcrime.securesms.payments.engine.Tx tx : txs) {
+            if (tx.getMemo() != null && tx.getMemo().startsWith("Pending top-up")) {
+              items.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), tx.getAmountSats(), CashuActivityItem.State.PENDING));
+            } else if (tx.getMemo() != null && tx.getMemo().startsWith("Top-up completed")) {
+              items.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), tx.getAmountSats(), CashuActivityItem.State.COMPLETED));
+            }
+          }
+          for (CashuActivityItem item : items) list.add(item);
+        } catch (Throwable ignore) {}
+      }
+
       if (state.getTotalPayments() > 0) {
-        list.add(new SettingHeader.Item(R.string.PaymentsHomeFragment__recent_activity));
         list.addAll(state.getPayments());
-        if (state.getTotalPayments() > MAX_PAYMENT_ITEMS) {
-          list.add(new SeeAll(PaymentType.PAYMENT));
-        }
       }
 
       if (!state.isRecentPaymentsLoaded()) {

@@ -1,4 +1,7 @@
 package org.thoughtcrime.securesms.payments.preferences;
+import org.thoughtcrime.securesms.payments.preferences.model.CashuActivityItem;
+import org.thoughtcrime.securesms.payments.preferences.viewholder.CashuActivityViewHolder;
+
 
 import androidx.annotation.NonNull;
 
@@ -27,7 +30,7 @@ public class PaymentsHomeAdapter extends MappingAdapter {
     registerFactory(PaymentItem.class, p -> new PaymentItemViewHolder(p, callbacks), R.layout.payments_home_payment_item);
     registerFactory(SettingHeader.Item.class, SettingHeader.ViewHolder::new, R.layout.base_settings_header_item);
     registerFactory(SeeAll.class, p -> new SeeAllViewHolder(p, callbacks), R.layout.payments_home_see_all_item);
-    registerFactory(InfoCard.class, p -> new InfoCardViewHolder(p, callbacks), R.layout.payment_info_card);
+    registerFactory(CashuActivityItem.class, CashuActivityViewHolder::new, R.layout.cashu_activity_item);
   }
 
   public interface Callbacks {

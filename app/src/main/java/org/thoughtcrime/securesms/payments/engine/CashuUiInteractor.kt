@@ -22,4 +22,9 @@ object CashuUiInteractor {
   fun mintPaidQuoteBlocking(context: Context, secretKeyOrId: String): Boolean = runBlocking {
     PaymentsEngineProvider.get(context).mintPaidQuote(secretKeyOrId).isSuccess
   }
+
+  @JvmStatic
+  fun listHistoryBlocking(context: Context, offset: Int, limit: Int): List<Tx> = runBlocking {
+    PaymentsEngineProvider.get(context).listHistory(offset, limit)
+  }
 }
