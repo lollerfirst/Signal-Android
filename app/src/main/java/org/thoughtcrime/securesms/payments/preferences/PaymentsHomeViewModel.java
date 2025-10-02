@@ -126,6 +126,18 @@ public class PaymentsHomeViewModel extends ViewModel {
               }
             } catch (Throwable ignore) {}
             items.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), -sats, CashuActivityItem.State.SENT, peer, name));
+          } else if (memo.startsWith("Received from")) {
+            long sats = Math.abs(tx.getAmountSats());
+            org.thoughtcrime.securesms.recipients.RecipientId peer = null;
+            String name = null;
+            try {
+              String[] parts = memo.split("\\|");
+              for (String p : parts) {
+                if (p.startsWith("rid:")) peer = org.thoughtcrime.securesms.recipients.RecipientId.from(p.substring(4));
+                else if (p.startsWith("name:")) name = p.substring(5);
+              }
+            } catch (Throwable ignore) {}
+            items.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), sats, CashuActivityItem.State.RECEIVED, peer, name));
           }
         }
         return items;

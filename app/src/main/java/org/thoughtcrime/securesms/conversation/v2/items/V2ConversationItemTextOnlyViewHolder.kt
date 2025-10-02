@@ -254,6 +254,38 @@ open class V2ConversationItemTextOnlyViewHolder<Model : MappingModel<Model>>(
     }
 
     presentBody()
+    if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments.cashuEnabled()) {
+      if (CashuTokenInlineRenderer.maybeAttachReceiveUi(binding, conversationMessage)) {
+        // If we rendered the Cashu UI and hid the text, skip the normal body presentation
+        presentDate()
+        presentDeliveryStatus()
+        presentFooterBackground()
+        presentFooterExpiry()
+        presentFooterEndPadding()
+        presentAlert()
+        presentSender()
+        presentSenderNameColor()
+        presentSenderNameBackground()
+        presentReactions()
+
+        bodyBubbleDrawable.setCorners(shapeDelegate.cornersLTR)
+        if (binding.body.isJumbomoji) {
+          bodyBubbleDrawable.setLocalChatColors(transparentChatColors)
+        } else if (binding.isIncoming) {
+          bodyBubbleDrawable.setLocalChatColors(ChatColors.forColor(ChatColors.Id.NotSet, themeDelegate.getBodyBubbleColor(conversationMessage)))
+        } else {
+          bodyBubbleDrawable.clearLocalChatColors()
+        }
+
+        binding.reply.setBackgroundColor(themeDelegate.getReplyIconBackgroundColor())
+
+        itemView.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+          topMargin = shape.topPadding.toInt()
+          bottomMargin = shape.bottomPadding.toInt()
+        }
+        return
+      }
+    }
     presentDate()
     presentDeliveryStatus()
     presentFooterBackground()

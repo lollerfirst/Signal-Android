@@ -14,7 +14,7 @@ import java.util.Locale;
 
 public final class CashuActivityItem implements MappingModel<CashuActivityItem> {
 
-  public enum State { PENDING, COMPLETED, SENT }
+  public enum State { PENDING, COMPLETED, SENT, RECEIVED }
 
   private final String  id;
   private final long    timestampMs;
@@ -68,13 +68,14 @@ public final class CashuActivityItem implements MappingModel<CashuActivityItem> 
   public @NonNull String getAmountText() {
     String base = formatSats(Math.abs(amountSats)) + " sat";
     if (state == State.SENT || amountSats < 0) return "-" + base;
-    if (state == State.COMPLETED) return "+" + base;
+    if (state == State.COMPLETED || state == State.RECEIVED || amountSats > 0) return "+" + base;
     return base; // pending
   }
 
   public @ColorRes int getAmountColor() {
     if (state == State.SENT || amountSats < 0) return R.color.signal_alert_primary; // red-ish
-    return state == State.COMPLETED ? R.color.core_green : R.color.signal_text_secondary;
+    if (state == State.COMPLETED || state == State.RECEIVED || amountSats > 0) return R.color.core_green;
+    return R.color.signal_text_secondary;
   }
 
   private static String formatSats(long sats) {

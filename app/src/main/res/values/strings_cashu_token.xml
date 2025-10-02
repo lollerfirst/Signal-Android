@@ -1,0 +1,6 @@
+<resources>
+  <string name="cashu_token_label">Ecash token</string>
+  <string name="cashu_token_receive_failed">Receive failed</string>
+  <string name="cashu_token_received_sats">Received %1$d sat</string>
+  <string name="cashu_token_receive">Receive</string>
+</resources>

@@ -30,6 +30,12 @@ public final class CashuActivityViewHolder extends MappingViewHolder<CashuActivi
       String display = model.getPeerDisplayName() != null ? model.getPeerDisplayName() : peer.getDisplayName(itemView.getContext());
       title.setText(itemView.getContext().getString(R.string.CashuActivity__sent_to_s, display));
       amount.setTextColor(itemView.getResources().getColor(R.color.signal_alert_primary));
+    } else if (model.getState() == CashuActivityItem.State.RECEIVED && model.getPeerRecipientId() != null) {
+      Recipient peer = Recipient.resolved(model.getPeerRecipientId());
+      avatar.setAvatar(peer);
+      String display = model.getPeerDisplayName() != null ? model.getPeerDisplayName() : peer.getDisplayName(itemView.getContext());
+      title.setText(itemView.getContext().getString(R.string.CashuActivity__received_from_s, display));
+      amount.setTextColor(itemView.getResources().getColor(R.color.core_green));
     } else {
       avatar.setImageResource(R.drawable.ic_mobilecoin_avatar_24);
       title.setText(model.getTitle(itemView.getContext()));
