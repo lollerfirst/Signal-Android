@@ -48,18 +48,26 @@ final class ConfirmPaymentViewModel extends ViewModel {
 
     this.store.update(SignalStore.payments().liveMobileCoinBalance(), (balance, state) -> state.updateBalance(balance.getFullAmount()));
 
-    LiveData<Boolean> longLoadTime = LiveDataUtil.delay(1000, true);
-    this.store.update(longLoadTime, (l, s) -> {
-      if (s.getFeeStatus() == ConfirmPaymentState.FeeStatus.NOT_SET) return s.updateFeeStillLoading();
-      else                                                           return s;
-    });
-
     LiveData<Money> amount = Transformations.distinctUntilChanged(Transformations.map(store.getStateLiveData(), ConfirmPaymentState::getAmount));
-    this.store.update(LiveDataUtil.mapAsync(LiveDataUtil.combineLatest(amount, feeRetry, (a, f) -> a), this::getFee), (feeResult, state) -> {
-      if      (feeResult instanceof ConfirmPaymentRepository.GetFeeResult.Success) return state.updateFee(((ConfirmPaymentRepository.GetFeeResult.Success) feeResult).getFee());
-      else if (feeResult instanceof ConfirmPaymentRepository.GetFeeResult.Error)   return state.updateFeeError();
-      else throw new AssertionError();
-    });
+
+    boolean cashu = SignalStore.payments().cashuEnabled();
+
+    if (!cashu) {
+      LiveData<Boolean> longLoadTime = LiveDataUtil.delay(1000, true);
+      this.store.update(longLoadTime, (l, s) -> {
+        if (s.getFeeStatus() == ConfirmPaymentState.FeeStatus.NOT_SET) return s.updateFeeStillLoading();
+        else                                                           return s;
+      });
+
+      this.store.update(LiveDataUtil.mapAsync(LiveDataUtil.combineLatest(amount, feeRetry, (a, f) -> a), this::getFee), (feeResult, state) -> {
+        if      (feeResult instanceof ConfirmPaymentRepository.GetFeeResult.Success) return state.updateFee(((ConfirmPaymentRepository.GetFeeResult.Success) feeResult).getFee());
+        else if (feeResult instanceof ConfirmPaymentRepository.GetFeeResult.Error)   return state.updateFeeError();
+        else throw new AssertionError();
+      });
+    } else {
+      // Cashu has no network fee in this flow; set to zero and mark SET so confirm button is enabled
+      this.store.update(s -> s.updateFee(s.getAmount().toZero()));
+    }
 
     LiveData<UUID>               paymentId           = Transformations.distinctUntilChanged(Transformations.map(store.getStateLiveData(), ConfirmPaymentState::getPaymentId));
     LiveData<PaymentTransaction> transactionLiveData = Transformations.switchMap(paymentId, id -> (id != null) ? new PaymentTransactionLiveData(id) : new MutableLiveData<>());
@@ -97,6 +105,24 @@ final class ConfirmPaymentViewModel extends ViewModel {
   }
 
   void confirmPayment() {
+    if (SignalStore.payments().cashuEnabled()) {
+      store.update(state -> state.updateStatus(ConfirmPaymentState.Status.SUBMITTING));
+      // Set fee to zero immediately for Cashu
+      store.update(state -> state.updateFee(state.getAmount().toZero()));
+      java.util.concurrent.Executors.newSingleThreadExecutor().execute(() -> {
+        // Ensure repository
+        ConfirmCashuRepository repo = new ConfirmCashuRepository(org.thoughtcrime.securesms.dependencies.AppDependencies.getApplication());
+        repo.confirm(store.getState(), result -> {
+          if (result instanceof CashuConfirmResult.Success) {
+            store.update(s -> s.updateStatus(ConfirmPaymentState.Status.DONE));
+          } else if (result instanceof CashuConfirmResult.Error) {
+            store.update(s -> s.updateStatus(ConfirmPaymentState.Status.ERROR));
+          }
+        });
+      });
+      return;
+    }
+
     store.update(state -> state.updateStatus(ConfirmPaymentState.Status.SUBMITTING));
     confirmPaymentRepository.confirmPayment(store.getState(), this::handleConfirmPaymentResult);
   }
@@ -151,6 +177,16 @@ final class ConfirmPaymentViewModel extends ViewModel {
     }
 
     throw new AssertionError();
+  }
+
+
+  public interface CashuConfirmResult {
+    final class Success implements CashuConfirmResult {}
+    final class Error implements CashuConfirmResult {
+      private final String message;
+      public Error(String message) { this.message = message; }
+      public String getMessage() { return message; }
+    }
   }
 
   private @NonNull ConfirmPaymentState handlePaymentTransactionChanged(@Nullable PaymentTransaction paymentTransaction, @NonNull ConfirmPaymentState state) {

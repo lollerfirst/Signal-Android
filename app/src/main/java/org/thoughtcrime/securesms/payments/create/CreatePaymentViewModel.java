@@ -98,8 +98,19 @@ public class CreatePaymentViewModel extends ViewModel {
   public @NonNull String getCurrentMoneyAmountForCashu() { return inputState.getState().getMoneyAmount(); }
   @NonNull LiveData<Boolean> getIsPaymentsSupportedByPayee() { return isPaymentsSupportedByPayee; }
   @NonNull LiveData<CharSequence> getNote() { return Transformations.distinctUntilChanged(note); }
-  @NonNull LiveData<Boolean> isValidAmount() { return isValidAmount; }
-  @NonNull LiveData<Boolean> getCanSendPayment() { return isValidAmount; }
+  @NonNull LiveData<Boolean> isValidAmount() {
+    if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
+      return androidx.lifecycle.Transformations.map(inputState.getStateLiveData(), s -> {
+        try {
+          long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(s.getMoneyAmount());
+          return sats > 0L;
+        } catch (Throwable t) { return false; }
+      });
+    }
+    return isValidAmount;
+  }
+
+  @NonNull LiveData<Boolean> getCanSendPayment() { return isValidAmount(); }
   @NonNull LiveData<Money> getSpendableBalance() { return spendableBalance; }
 
   void clearAmount() {

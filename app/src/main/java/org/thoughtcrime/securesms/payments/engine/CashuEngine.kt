@@ -178,7 +178,17 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
       )
     }
 
-    (completed + pending + onchain).sortedByDescending { it.timestampMs }
+    // Include locally recorded outgoing sent ecash
+    val sent = CashuSendStore(appContext).list().map {
+      Tx(
+        id = it.id ?: ("sent-" + it.timestampMs),
+        timestampMs = it.timestampMs,
+        amountSats = -it.amountSats, // negative for outgoing
+        memo = it.memo ?: "Sent ecash"
+      )
+    }
+
+    (completed + pending + sent + onchain).sortedByDescending { it.timestampMs }
   }
 
   override suspend fun backupExport(): EncryptedBlob = withContext(Dispatchers.IO) {

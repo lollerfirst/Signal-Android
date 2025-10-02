@@ -48,6 +48,7 @@ import org.thoughtcrime.securesms.util.WindowUtil;
 import org.thoughtcrime.securesms.util.adapter.mapping.MappingModelList;
 import org.thoughtcrime.securesms.util.navigation.SafeNavigation;
 import org.whispersystems.signalservice.api.payments.FormatterOptions;
+import org.whispersystems.signalservice.api.payments.Money;
 
 import java.util.concurrent.TimeUnit;
 
@@ -169,6 +170,11 @@ public class ConfirmPaymentFragment extends BottomSheetDialogFragment {
     biometricAuth.cancelAuthentication();
   }
 
+  private long getSatsFromMoney(@NonNull Money money) {
+    String number = money.toString(org.whispersystems.signalservice.api.payments.FormatterOptions.builder().withoutUnit().build());
+    try { return org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(number); } catch (Throwable t) { return 0L; }
+  }
+
   private @NonNull MappingModelList createList(@NonNull ConfirmPaymentState state) {
     MappingModelList list      = new MappingModelList();
     FormatterOptions options   = FormatterOptions.defaults();
@@ -180,6 +186,21 @@ public class ConfirmPaymentFragment extends BottomSheetDialogFragment {
         break;
       case NOT_SET:
       case SET:
+        if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
+          long sats = getSatsFromMoney(state.getAmount());
+          String satsText = java.text.NumberFormat.getInstance(java.util.Locale.getDefault()).format(sats) + " sat";
+          list.add(new ConfirmPaymentAdapter.LineItem(getToPayeeDescription(requireContext(), state), satsText));
+
+          // Cashu: no network fee row and fiat estimate from sats
+          org.thoughtcrime.securesms.payments.engine.CashuUiRepository repo = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext());
+          String fiat = repo.satsToFiatStringBlocking(sats);
+          list.add(new ConfirmPaymentAdapter.LineItem(getString(R.string.ConfirmPayment__estimated_s, org.thoughtcrime.securesms.keyvalue.SignalStore.payments().currentCurrency().getCurrencyCode()), fiat));
+
+          list.add(new ConfirmPaymentAdapter.Divider());
+          list.add(new ConfirmPaymentAdapter.TotalLineItem(getString(R.string.ConfirmPayment__total_amount), satsText));
+          break;
+        }
+        // Default (MobileCoin) path
         list.add(new ConfirmPaymentAdapter.LineItem(getToPayeeDescription(requireContext(), state), state.getAmount().toString(options)));
         if (state.getExchange() != null) {
           list.add(new ConfirmPaymentAdapter.LineItem(getString(R.string.ConfirmPayment__estimated_s, state.getExchange().getCurrency().getCurrencyCode()),
