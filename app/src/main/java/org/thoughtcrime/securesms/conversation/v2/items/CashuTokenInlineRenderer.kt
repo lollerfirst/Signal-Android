@@ -17,10 +17,18 @@ import org.thoughtcrime.securesms.dependencies.AppDependencies
 object CashuTokenInlineRenderer {
   private fun extractToken(text: CharSequence?): String? {
     val s = text?.toString() ?: return null
-    // Find first whitespace-delimited part that looks like a cashu token
-    val parts = s.split("\n", "\t", " ")
-    val candidate = parts.firstOrNull { it.startsWith("cashu", ignoreCase = true) }
+    val parts = s.split(Regex("\\s+"))
+    val candidate = parts.firstOrNull { part ->
+      val p = part.trim()
+      p.startsWith("cashu:", ignoreCase = true) || p.startsWith("cashuA") || p.startsWith("cashuB")
+    }
     return candidate
+  }
+
+  fun resetIfPresent(binding: V2ConversationItemTextOnlyBindingBridge) {
+    val parent = binding.bodyWrapper
+    parent.findViewById<View>(R.id.cashu_token_receive_bar)?.let { parent.removeView(it) }
+    binding.body.visibility = View.VISIBLE
   }
 
   private fun formatSats(sats: Long): String {

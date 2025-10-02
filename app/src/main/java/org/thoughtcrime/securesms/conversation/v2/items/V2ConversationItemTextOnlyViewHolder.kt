@@ -255,6 +255,8 @@ open class V2ConversationItemTextOnlyViewHolder<Model : MappingModel<Model>>(
 
     presentBody()
     if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments.cashuEnabled()) {
+      // Always reset any previous inline UI before re-binding
+      CashuTokenInlineRenderer.resetIfPresent(binding)
       if (CashuTokenInlineRenderer.maybeAttachReceiveUi(binding, conversationMessage)) {
         // If we rendered the Cashu UI and hid the text, skip the normal body presentation
         presentDate()
