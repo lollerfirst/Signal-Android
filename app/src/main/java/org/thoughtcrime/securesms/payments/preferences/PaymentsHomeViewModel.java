@@ -13,7 +13,10 @@ import org.signal.core.util.logging.Log;
 import org.signal.core.util.money.FiatMoney;
 import org.thoughtcrime.securesms.R;
 import org.thoughtcrime.securesms.payments.preferences.model.CashuActivityItem;
+import java.util.Collections;
 import java.util.ArrayList;
+
+import java.util.concurrent.Executors;
 
 import org.thoughtcrime.securesms.components.settings.SettingHeader;
 import org.thoughtcrime.securesms.dependencies.AppDependencies;
@@ -65,7 +68,8 @@ public class PaymentsHomeViewModel extends ViewModel {
   private final boolean cashuEnabled;
   private final CashuUiRepository cashuUiRepository;
   private final LiveData<Long> cashuSatsBalance;
-  private final LiveData<String> cashuFiatText;
+  // Cashu recent activity cache (loaded async)
+  private volatile java.util.List<CashuActivityItem> recentCashuItems = java.util.Collections.emptyList();
 
   PaymentsHomeViewModel(@NonNull PaymentsHomeRepository paymentsHomeRepository,
                         @NonNull PaymentsRepository paymentsRepository,
