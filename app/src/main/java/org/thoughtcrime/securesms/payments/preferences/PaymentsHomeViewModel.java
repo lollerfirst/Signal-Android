@@ -12,6 +12,9 @@ import com.annimon.stream.Stream;
 import org.signal.core.util.logging.Log;
 import org.signal.core.util.money.FiatMoney;
 import org.thoughtcrime.securesms.R;
+import org.thoughtcrime.securesms.payments.preferences.model.CashuActivityItem;
+import java.util.ArrayList;
+
 import org.thoughtcrime.securesms.components.settings.SettingHeader;
 import org.thoughtcrime.securesms.dependencies.AppDependencies;
 import org.thoughtcrime.securesms.keyvalue.PaymentsAvailability;
@@ -184,33 +187,40 @@ public class PaymentsHomeViewModel extends ViewModel {
     if (state.getPaymentsState() == PaymentsHomeState.PaymentsState.ACTIVATED) {
       list.add(new SettingHeader.Item(R.string.PaymentsHomeFragment__recent_activity));
 
-      // Cashu: show pending and completed top-ups from engine synthetic list when sats path is enabled
+      int maxItems = 5;
+      int added = 0;
+
+      // Cashu: show pending and completed top-ups (synthetic) first
       if (cashuEnabled) {
         try {
-          org.thoughtcrime.securesms.payments.engine.PaymentsEngine engine = org.thoughtcrime.securesms.payments.engine.PaymentsEngineProvider.get(AppDependencies.getApplication());
           java.util.List<org.thoughtcrime.securesms.payments.engine.Tx> txs = org.thoughtcrime.securesms.payments.engine.CashuUiInteractor.listHistoryBlocking(AppDependencies.getApplication(), 0, 50);
-          java.util.List<CashuActivityItem> items = new ArrayList<>();
+          java.util.List<CashuActivityItem> cashuItems = new ArrayList<>();
           for (org.thoughtcrime.securesms.payments.engine.Tx tx : txs) {
-            if (tx.getMemo() != null && tx.getMemo().startsWith("Pending top-up")) {
-              items.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), tx.getAmountSats(), CashuActivityItem.State.PENDING));
-            } else if (tx.getMemo() != null && tx.getMemo().startsWith("Top-up completed")) {
-              items.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), tx.getAmountSats(), CashuActivityItem.State.COMPLETED));
+            if (tx.getMemo() == null) continue;
+            if (tx.getMemo().startsWith("Pending top-up")) {
+              cashuItems.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), tx.getAmountSats(), CashuActivityItem.State.PENDING));
+            } else if (tx.getMemo().startsWith("Top-up completed")) {
+              cashuItems.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), tx.getAmountSats(), CashuActivityItem.State.COMPLETED));
             }
           }
-          for (CashuActivityItem item : items) list.add(item);
+          // Add up to maxItems from Cashu
+          int take = Math.min(maxItems - added, cashuItems.size());
+          for (int i = 0; i < take; i++) { list.add(cashuItems.get(i)); }
+          added += take;
         } catch (Throwable ignore) {}
       }
 
-      if (state.getTotalPayments() > 0) {
-        list.addAll(state.getPayments());
+      // Then fill remaining slots with legacy PaymentItems
+      if (added < maxItems && state.getTotalPayments() > 0) {
+        java.util.List<PaymentItem> payments = state.getPayments();
+        int take = Math.min(maxItems - added, payments.size());
+        for (int i = 0; i < take; i++) { list.add(payments.get(i)); }
+        added += take;
       }
 
       if (!state.isRecentPaymentsLoaded()) {
         list.add(new InProgress());
-      } else if (state.getRequests().isEmpty() &&
-                 state.getPayments().isEmpty() &&
-                 state.isRecentPaymentsLoaded())
-      {
+      } else if (added == 0) {
         list.add(new NoRecentActivity());
       }
     } else if (state.getPaymentsState() == PaymentsHomeState.PaymentsState.ACTIVATE_NOT_ALLOWED) {
