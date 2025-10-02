@@ -1,12 +1,46 @@
 package org.thoughtcrime.securesms.payments.create;
-  private String formatSats(long sats) {
-    java.text.NumberFormat nf = java.text.NumberFormat.getInstance(java.util.Locale.getDefault());
-    nf.setGroupingUsed(true);
-    nf.setMaximumFractionDigits(0);
-    return nf.format(sats);
-  }
 
-package org.thoughtcrime.securesms.payments.create;
+import android.graphics.drawable.Drawable;
+import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.View;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.content.res.AppCompatResources;
+import androidx.appcompat.widget.Toolbar;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.constraintlayout.widget.ConstraintSet;
+import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.NavDirections;
+import androidx.navigation.Navigation;
+import androidx.transition.TransitionManager;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import org.thoughtcrime.securesms.LoggingFragment;
+import org.thoughtcrime.securesms.R;
+import org.thoughtcrime.securesms.components.emoji.EmojiTextView;
+import org.thoughtcrime.securesms.payments.FiatMoneyUtil;
+import org.thoughtcrime.securesms.payments.MoneyView;
+import org.thoughtcrime.securesms.payments.preferences.RecipientHasNotEnabledPaymentsDialog;
+import org.thoughtcrime.securesms.util.CommunicationActions;
+import org.thoughtcrime.securesms.util.PlayStoreUtil;
+import org.thoughtcrime.securesms.util.SpanUtil;
+import org.thoughtcrime.securesms.util.ViewUtil;
+import org.thoughtcrime.securesms.util.navigation.SafeNavigation;
+import org.whispersystems.signalservice.api.payments.FormatterOptions;
+import org.whispersystems.signalservice.api.payments.Money;
+
+import java.text.DecimalFormatSymbols;
+import java.util.Currency;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+
 public class CreatePaymentFragment extends LoggingFragment {
 
   private static final Map<Integer,AmountKeyboardGlyph> ID_TO_GLYPH = new HashMap<Integer, AmountKeyboardGlyph>() {{
@@ -137,6 +171,13 @@ public class CreatePaymentFragment extends LoggingFragment {
             .show();
       }
     });
+  }
+
+  private String formatSats(long sats) {
+    java.text.NumberFormat nf = java.text.NumberFormat.getInstance(java.util.Locale.getDefault());
+    nf.setGroupingUsed(true);
+    nf.setMaximumFractionDigits(0);
+    return nf.format(sats);
   }
 
   @Override
