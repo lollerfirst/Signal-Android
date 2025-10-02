@@ -114,6 +114,18 @@ public class PaymentsHomeViewModel extends ViewModel {
             items.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), tx.getAmountSats(), CashuActivityItem.State.PENDING));
           } else if (memo.startsWith("Top-up completed")) {
             items.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), tx.getAmountSats(), CashuActivityItem.State.COMPLETED));
+          } else if (memo.startsWith("Sent ecash")) {
+            long sats = Math.abs(tx.getAmountSats());
+            org.thoughtcrime.securesms.recipients.RecipientId peer = null;
+            String name = null;
+            try {
+              String[] parts = memo.split("\\|");
+              for (String p : parts) {
+                if (p.startsWith("rid:")) peer = org.thoughtcrime.securesms.recipients.RecipientId.from(p.substring(4));
+                else if (p.startsWith("name:")) name = p.substring(5);
+              }
+            } catch (Throwable ignore) {}
+            items.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), -sats, CashuActivityItem.State.SENT, peer, name));
           }
         }
         return items;
@@ -232,14 +244,15 @@ public class PaymentsHomeViewModel extends ViewModel {
       int maxItems = 5;
       int added = 0;
 
-      // Cashu: show pending and completed top-ups (synthetic) first
+      // Cashu: show pending, completed, and sent items first
       if (cashuEnabled) {
         if (cashuItems == null) {
           // Still loading in background; we'll show InProgress below
         } else if (!cashuItems.isEmpty()) {
-          int take = Math.min(maxItems - added, cashuItems.size());
+          int take = Math.min(MAX_PAYMENT_ITEMS, cashuItems.size());
           for (int i = 0; i < take; i++) { list.add(cashuItems.get(i)); }
-          added += take;
+          // Added sent items may consume the entire list; skip legacy payments if so
+          if (take >= MAX_PAYMENT_ITEMS) return list;
         }
       }
 

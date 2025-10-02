@@ -10,16 +10,14 @@
     android:paddingEnd="16dp"
     android:paddingBottom="10dp">
 
-    <ImageView
-        android:id="@+id/cashu_activity_icon"
+    <org.thoughtcrime.securesms.components.AvatarImageView
+        android:id="@+id/cashu_activity_avatar"
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:layout_marginTop="4dp"
-        android:contentDescription="@string/app_name"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/ic_mobilecoin_avatar_24"
-        tools:ignore="ContentDescription" />
+        tools:src="@drawable/circle_tintable" />
 
     <TextView
         android:id="@+id/cashu_activity_title"
@@ -29,9 +27,9 @@
         android:textAppearance="@style/Signal.Text.Body"
         android:textColor="@color/signal_text_primary"
         app:layout_constraintEnd_toStartOf="@+id/cashu_activity_amount"
-        app:layout_constraintStart_toEndOf="@id/cashu_activity_icon"
-        app:layout_constraintTop_toTopOf="@id/cashu_activity_icon"
-        tools:text="Top-up completed" />
+        app:layout_constraintStart_toEndOf="@id/cashu_activity_avatar"
+        app:layout_constraintTop_toTopOf="@id/cashu_activity_avatar"
+        tools:text="Sent to Alice" />
 
     <TextView
         android:id="@+id/cashu_activity_date"
@@ -41,7 +39,7 @@
         android:textAppearance="@style/Signal.Text.Caption"
         android:textColor="@color/signal_text_secondary"
         app:layout_constraintEnd_toStartOf="@+id/cashu_activity_amount"
-        app:layout_constraintStart_toEndOf="@id/cashu_activity_icon"
+        app:layout_constraintStart_toEndOf="@id/cashu_activity_avatar"
         app:layout_constraintTop_toBottomOf="@+id/cashu_activity_title"
         tools:text="2/2/20" />
 
@@ -54,6 +52,6 @@
         app:layout_constraintBottom_toBottomOf="@+id/cashu_activity_title"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@+id/cashu_activity_title"
-        tools:text="+10,000 sat" />
+        tools:text="-10,000 sat" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

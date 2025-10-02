@@ -38,10 +38,20 @@ final class ConfirmCashuRepository {
 
       String note = state.getNote();
       String token = CashuSendHelper.createTokenBlocking(appContext, sats, note);
-      // Persist local sent entry for Recent Activity
+      // Persist local sent entry for Recent Activity, embed recipient metadata in memo: "Sent ecash|rid:<id>|name:<name>"
+      String sentMemo = "Sent ecash";
+      if (state.getPayee().hasRecipientId()) {
+        try {
+          RecipientId rid = state.getPayee().requireRecipientId();
+          String display = Recipient.resolved(rid).getDisplayName(appContext);
+          // simple escaping for separator character '|'
+          String safeName = display.replace("|", "\u2758");
+          sentMemo = sentMemo + "|rid:" + rid.serialize() + "|name:" + safeName;
+        } catch (Throwable ignore) {}
+      }
       try {
         new org.thoughtcrime.securesms.payments.engine.CashuSendStore(appContext).add(
-            new org.thoughtcrime.securesms.payments.engine.CashuSendStore.Sent(null, sats, System.currentTimeMillis(), "Sent ecash")
+            new org.thoughtcrime.securesms.payments.engine.CashuSendStore.Sent(null, sats, System.currentTimeMillis(), sentMemo)
         );
       } catch (Throwable t) {
         Log.w(TAG, "Failed to record CashuSendStore entry", t);

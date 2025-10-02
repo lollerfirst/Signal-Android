@@ -6,6 +6,7 @@ import androidx.annotation.ColorRes;
 import androidx.annotation.NonNull;
 
 import org.thoughtcrime.securesms.R;
+import org.thoughtcrime.securesms.recipients.RecipientId;
 import org.thoughtcrime.securesms.util.DateUtils;
 import org.thoughtcrime.securesms.util.adapter.mapping.MappingModel;
 
@@ -13,27 +14,51 @@ import java.util.Locale;
 
 public final class CashuActivityItem implements MappingModel<CashuActivityItem> {
 
-  public enum State { PENDING, COMPLETED }
+  public enum State { PENDING, COMPLETED, SENT }
 
   private final String  id;
   private final long    timestampMs;
-  private final long    amountSats; // positive for incoming top-up
+  private final long    amountSats; // positive for incoming top-up, negative for outgoing send
   private final State   state;
+  private final RecipientId peerRecipientId; // optional, used for SENT to show avatar/name
+  private final String  peerDisplayName;     // cached name for display
 
   public CashuActivityItem(@NonNull String id, long timestampMs, long amountSats, @NonNull State state) {
+    this(id, timestampMs, amountSats, state, null, null);
+  }
+
+  public CashuActivityItem(@NonNull String id,
+                           long timestampMs,
+                           long amountSats,
+                           @NonNull State state,
+                           RecipientId peerRecipientId,
+                           String peerDisplayName) {
     this.id = id;
     this.timestampMs = timestampMs;
     this.amountSats = amountSats;
     this.state = state;
+    this.peerRecipientId = peerRecipientId;
+    this.peerDisplayName = peerDisplayName;
   }
 
   public @NonNull String getId() { return id; }
   public long getTimestampMs() { return timestampMs; }
   public long getAmountSats() { return amountSats; }
   public @NonNull State getState() { return state; }
+  public RecipientId getPeerRecipientId() { return peerRecipientId; }
+  public String getPeerDisplayName() { return peerDisplayName; }
 
-  public @NonNull String getTitle() {
-    return state == State.COMPLETED ? "Top-up completed" : "Pending top-up";
+  public @NonNull String getTitle(@NonNull Context context) {
+    switch (state) {
+      case SENT:
+        String name = peerDisplayName != null ? peerDisplayName : context.getString(R.string.CashuActivity__unknown);
+        return context.getString(R.string.CashuActivity__sent_to_s, name);
+      case COMPLETED:
+        return context.getString(R.string.CashuActivity__top_up_completed);
+      case PENDING:
+      default:
+        return context.getString(R.string.CashuActivity__pending_top_up);
+    }
   }
 
   public @NonNull String getDate(@NonNull Context context) {
@@ -41,11 +66,14 @@ public final class CashuActivityItem implements MappingModel<CashuActivityItem> 
   }
 
   public @NonNull String getAmountText() {
-    if (state == State.PENDING) return formatSats(amountSats) + " sat";
-    return "+" + formatSats(amountSats) + " sat";
+    String base = formatSats(Math.abs(amountSats)) + " sat";
+    if (state == State.SENT || amountSats < 0) return "-" + base;
+    if (state == State.COMPLETED) return "+" + base;
+    return base; // pending
   }
 
   public @ColorRes int getAmountColor() {
+    if (state == State.SENT || amountSats < 0) return R.color.signal_alert_primary; // red-ish
     return state == State.COMPLETED ? R.color.core_green : R.color.signal_text_secondary;
   }
 

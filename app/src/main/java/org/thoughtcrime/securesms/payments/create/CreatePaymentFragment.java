@@ -158,8 +158,8 @@ public class CreatePaymentFragment extends LoggingFragment {
     viewModel.getNote().observe(getViewLifecycleOwner(), this::updateNote);
     viewModel.getSpendableBalance().observe(getViewLifecycleOwner(), mob -> {
       if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
-        long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(viewModel.getInputState().getValue() != null ? viewModel.getInputState().getValue().getMoneyAmount() : "0");
-        this.balance.setText("Available: " + formatSats(sats) + " sat");
+        long satsAvailable = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext()).getSpendableSatsBlocking();
+        this.balance.setText("Available: " + formatSats(satsAvailable) + " sat");
       } else {
         this.updateBalance(mob);
       }

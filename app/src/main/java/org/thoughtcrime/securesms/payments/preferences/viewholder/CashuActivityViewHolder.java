@@ -6,7 +6,9 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 
 import org.thoughtcrime.securesms.R;
+import org.thoughtcrime.securesms.components.AvatarImageView;
 import org.thoughtcrime.securesms.payments.preferences.model.CashuActivityItem;
+import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.util.adapter.mapping.MappingViewHolder;
 
 public final class CashuActivityViewHolder extends MappingViewHolder<CashuActivityItem> {
@@ -20,14 +22,21 @@ public final class CashuActivityViewHolder extends MappingViewHolder<CashuActivi
     TextView title  = itemView.findViewById(R.id.cashu_activity_title);
     TextView date   = itemView.findViewById(R.id.cashu_activity_date);
     TextView amount = itemView.findViewById(R.id.cashu_activity_amount);
+    AvatarImageView avatar = itemView.findViewById(R.id.cashu_activity_avatar);
 
-    // Fix id: actual ID is cashu_activity_title
-    title = itemView.findViewById(R.id.cashu_activity_title);
+    if (model.getState() == CashuActivityItem.State.SENT && model.getPeerRecipientId() != null) {
+      Recipient peer = Recipient.resolved(model.getPeerRecipientId());
+      avatar.setAvatar(peer);
+      String display = model.getPeerDisplayName() != null ? model.getPeerDisplayName() : peer.getDisplayName(itemView.getContext());
+      title.setText(itemView.getContext().getString(R.string.CashuActivity__sent_to_s, display));
+      amount.setTextColor(itemView.getResources().getColor(R.color.signal_alert_primary));
+    } else {
+      avatar.setImageResource(R.drawable.ic_mobilecoin_avatar_24);
+      title.setText(model.getTitle(itemView.getContext()));
+      amount.setTextColor(itemView.getResources().getColor(model.getAmountColor()));
+    }
 
-    title.setText(model.getTitle());
     date.setText(model.getDate(itemView.getContext()));
     amount.setText(model.getAmountText());
-    amount.setTextColor(itemView.getResources().getColor(model.getAmountColor()))
-    ;
   }
 }

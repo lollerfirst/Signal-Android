@@ -51,7 +51,15 @@ public class CreatePaymentViewModel extends ViewModel {
 
   CreatePaymentViewModel(@NonNull PayeeParcelable payee, @Nullable CharSequence note) {
     this.payee            = payee;
-    this.spendableBalance = Transformations.map(SignalStore.payments().liveMobileCoinBalance(), Balance::getTransferableAmount);
+    this.spendableBalance = SignalStore.payments().cashuEnabled()
+        ? org.thoughtcrime.securesms.util.livedata.LiveDataUtil.mapAsync(new DefaultValueLiveData<>(true), x -> {
+            try {
+              return Money.parseOrThrow(String.valueOf(new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(AppDependencies.getApplication()).getSpendableSatsBlocking()));
+            } catch (Throwable t) {
+              return Money.MobileCoin.ZERO; // placeholder, we only use text in Cashu UI
+            }
+          })
+        : Transformations.map(SignalStore.payments().liveMobileCoinBalance(), Balance::getTransferableAmount);
     this.note             = new MutableLiveData<>(note);
     this.inputState       = new Store<>(new InputState());
     this.isValidAmount    = LiveDataUtil.combineLatest(spendableBalance, inputState.getStateLiveData(), (b, s) -> validateAmount(b.requireMobileCoin(), s.getMoney().requireMobileCoin()));
