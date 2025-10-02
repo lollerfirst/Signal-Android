@@ -4,8 +4,10 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
+    android:paddingStart="12dp"
+    android:paddingEnd="8dp"
     android:paddingTop="6dp"
-    android:paddingBottom="2dp">
+    android:paddingBottom="4dp">
 
     <TextView
         android:id="@+id/cashu_token_label"
@@ -13,8 +15,8 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:textAppearance="@style/TextAppearance.Signal.Body1"
-        android:textColor="@color/signal_text_secondary"
-        android:text="Ecash token" />
+        android:textColor="@color/signal_text_primary"
+        tools:text="10,000 sat" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/cashu_token_receive"

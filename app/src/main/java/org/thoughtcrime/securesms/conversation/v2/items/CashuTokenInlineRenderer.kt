@@ -4,6 +4,8 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import org.cashudevkit.Amount
+import org.cashudevkit.Token
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.conversation.ConversationMessage
 import org.thoughtcrime.securesms.dependencies.AppDependencies
@@ -19,6 +21,13 @@ object CashuTokenInlineRenderer {
     val parts = s.split("\n", "\t", " ")
     val candidate = parts.firstOrNull { it.startsWith("cashu", ignoreCase = true) }
     return candidate
+  }
+
+  private fun formatSats(sats: Long): String {
+    val nf = java.text.NumberFormat.getInstance(java.util.Locale.getDefault())
+    nf.maximumFractionDigits = 0
+    nf.isGroupingUsed = true
+    return nf.format(sats)
   }
 
   fun maybeAttachReceiveUi(binding: V2ConversationItemTextOnlyBindingBridge, conversationMessage: ConversationMessage): Boolean {
@@ -43,7 +52,22 @@ object CashuTokenInlineRenderer {
     bar.id = R.id.cashu_token_receive_bar
     val label = bar.findViewById<TextView>(R.id.cashu_token_label)
     val receive = bar.findViewById<Button>(R.id.cashu_token_receive)
-    label.text = ctx.getString(R.string.cashu_token_label)
+
+    // Try to decode token value to display sats amount inline
+    val sats: Long = try {
+      val decoded = Token.decode(token)
+      val amt = decoded.value() as Amount
+      val v = amt.value.toLong()
+      decoded.close()
+      v
+    } catch (_: Throwable) { 0L }
+
+    if (sats > 0L) {
+      label.text = formatSats(sats) + " sat"
+    } else {
+      // Fallback if decoding fails
+      label.text = ctx.getString(R.string.cashu_token_label)
+    }
 
     receive.setOnClickListener {
       val engine = org.thoughtcrime.securesms.payments.engine.PaymentsEngineProvider.get(AppDependencies.application)
