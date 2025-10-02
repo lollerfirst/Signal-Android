@@ -91,11 +91,19 @@ public class PaymentsHomeViewModel extends ViewModel {
 
     this.cashuEnabled               = SignalStore.payments().cashuEnabled();
     this.cashuUiRepository          = new CashuUiRepository(AppDependencies.getApplication());
+    // Sats header
     this.cashuSatsBalance           = LiveDataUtil.mapAsync(store.getStateLiveData(), s -> cashuUiRepository.getSpendableSatsBlocking());
     this.cashuFiatText              = LiveDataUtil.mapAsync(this.cashuSatsBalance, sats -> cashuUiRepository.satsToFiatStringBlocking(sats));
 
-    // Fetch and map Cashu history off main thread based on an explicit refresh trigger
-    this.cashuRecentActivity        = LiveDataUtil.mapAsync(cashuRefresh, o -> {
+    // Trigger for Cashu recent activity: either an explicit refresh OR a sats balance change
+    androidx.lifecycle.LiveData<Object> cashuTrigger = org.thoughtcrime.securesms.util.livedata.LiveDataUtil.combineLatest(
+        cashuRefresh,
+        cashuSatsBalance,
+        (o, sats) -> o
+    );
+
+    // Fetch and map Cashu history off main thread based on trigger
+    this.cashuRecentActivity        = LiveDataUtil.mapAsync(cashuTrigger, o -> {
       try {
         java.util.List<org.thoughtcrime.securesms.payments.engine.Tx> txs = org.thoughtcrime.securesms.payments.engine.CashuUiInteractor.listHistoryBlocking(AppDependencies.getApplication(), 0, 50);
         java.util.List<CashuActivityItem> items = new ArrayList<>();
