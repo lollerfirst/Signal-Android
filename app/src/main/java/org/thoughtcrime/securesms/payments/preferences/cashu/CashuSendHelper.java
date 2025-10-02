@@ -12,7 +12,10 @@ public final class CashuSendHelper {
   private CashuSendHelper() {}
 
   public static long getCurrentAmountSats(@NonNull CreatePaymentViewModel vm) {
-    return CashuAmountAccessor.getAmountSats(vm);
+    try {
+      String amount = vm.getCurrentMoneyAmountForCashu();
+      return CashuAmountAccessor.getAmountSats(amount);
+    } catch (Throwable t) { return 0L; }
   }
 
   public static @NonNull String createTokenBlocking(@NonNull Context context, long sats, CharSequence memo) {

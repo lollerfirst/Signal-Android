@@ -121,11 +121,16 @@ public class CreatePaymentFragment extends LoggingFragment {
 
     pay.setOnClickListener(v -> {
       if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
-        long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(viewModel);
+        long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(viewModel.getCurrentMoneyAmountForCashu());
         String token = org.thoughtcrime.securesms.payments.preferences.cashu.CashuSendHelper.createTokenBlocking(requireContext(), sats, viewModel.getNote().getValue());
-        android.content.ClipboardManager clipboard = (android.content.ClipboardManager) requireContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE);
-        clipboard.setPrimaryClip(android.content.ClipData.newPlainText(getString(R.string.app_name), token));
-        android.widget.Toast.makeText(requireContext(), "Cashu token copied", android.widget.Toast.LENGTH_SHORT).show();
+        // Send token as a message to the selected recipient
+        org.thoughtcrime.securesms.payments.create.CreatePaymentFragmentArgs args = org.thoughtcrime.securesms.payments.create.CreatePaymentFragmentArgs.fromBundle(requireArguments());
+        org.thoughtcrime.securesms.recipients.RecipientId recipientId = args.getPayee().getPayee().requireRecipientId();
+        long threadId = org.thoughtcrime.securesms.database.SignalDatabase.threads().getOrCreateThreadIdFor(org.thoughtcrime.securesms.recipients.Recipient.resolved(recipientId));
+        android.content.Intent intent = org.thoughtcrime.securesms.conversation.ConversationIntents.createBuilderSync(requireContext(), recipientId, threadId)
+            .withDraftText(token)
+            .build();
+        startActivity(intent);
         return;
       }
       NavDirections directions = CreatePaymentFragmentDirections.actionCreatePaymentFragmentToConfirmPaymentFragment(viewModel.getCreatePaymentDetails())
@@ -140,7 +145,17 @@ public class CreatePaymentFragment extends LoggingFragment {
 
     viewModel.getInputState().observe(getViewLifecycleOwner(), inputState -> {
       updateAmount(inputState);
-      updateExchange(inputState);
+      // Update exchange: for Cashu, compute sats->fiat; otherwise legacy MOB
+      if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
+        long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(inputState.getMoneyAmount());
+        String fiatText = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext()).satsToFiatStringBlocking(sats);
+        exchange.setVisibility(View.VISIBLE);
+        exchange.setText(fiatText);
+        toggle.setVisibility(View.GONE);
+        toggle.setEnabled(false);
+      } else {
+        updateExchange(inputState);
+      }
       updateMoneyInputTarget(inputState.getInputTarget());
     });
 
@@ -152,8 +167,7 @@ public class CreatePaymentFragment extends LoggingFragment {
     viewModel.getNote().observe(getViewLifecycleOwner(), this::updateNote);
     viewModel.getSpendableBalance().observe(getViewLifecycleOwner(), mob -> {
       if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
-        // Replace MOB balance with sats balance when Cashu is enabled
-        long sats = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext()).getSpendableSatsBlocking();
+        long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(viewModel.getInputState().getValue() != null ? viewModel.getInputState().getValue().getMoneyAmount() : "0");
         this.balance.setText("Available: " + formatSats(sats) + " sat");
       } else {
         this.updateBalance(mob);
@@ -231,7 +245,12 @@ public class CreatePaymentFragment extends LoggingFragment {
   private void updateAmount(@NonNull InputState inputState) {
     switch (inputState.getInputTarget()) {
       case MONEY:
-        amount.setMoney(inputState.getMoneyAmount(), inputState.getMoney().getCurrency());
+        if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
+          long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(inputState.getMoneyAmount());
+          amount.setText(formatSats(sats) + " sat");
+        } else {
+          amount.setMoney(inputState.getMoneyAmount(), inputState.getMoney().getCurrency());
+        }
         break;
       case FIAT_MONEY:
         amount.setMoney(inputState.getMoney(), false, inputState.getExchangeRate().get().getTimestamp());
@@ -243,20 +262,16 @@ public class CreatePaymentFragment extends LoggingFragment {
 
   private void updateExchange(@NonNull InputState inputState) {
     switch (inputState.getInputTarget()) {
-      case MONEY:
-        if (inputState.getFiatMoney().isPresent()) {
-          exchange.setVisibility(View.VISIBLE);
-          exchange.setText(FiatMoneyUtil.format(getResources(), inputState.getFiatMoney().get(), FiatMoneyUtil.formatOptions().withDisplayTime(true)));
-          exchange.append(SpanUtil.buildImageSpan(spacer));
-          exchange.append(SpanUtil.buildImageSpan(infoIcon));
-          toggle.setVisibility(View.VISIBLE);
-          toggle.setEnabled(true);
-        } else {
-          exchange.setVisibility(View.INVISIBLE);
-          toggle.setVisibility(View.INVISIBLE);
-          toggle.setEnabled(false);
-        }
+      if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
+        // Use fiat estimate via Coinbase for sats amount; request a fresh rate when needed
+        long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(inputState.getMoneyAmount());
+        String fiatText = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext()).satsToFiatStringBlocking(sats);
+        exchange.setVisibility(View.VISIBLE);
+        exchange.setText(fiatText);
+        toggle.setVisibility(View.GONE);
+        toggle.setEnabled(false);
         break;
+      }
       case FIAT_MONEY:
         Currency currency = inputState.getFiatMoney().get().getCurrency();
         exchange.setText(FiatMoneyUtil.manualFormat(currency, inputState.getFiatAmount()));

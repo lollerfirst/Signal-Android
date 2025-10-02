@@ -49,7 +49,7 @@ public class CreatePaymentViewModel extends ViewModel {
   private final PayeeParcelable               payee;
   private final MutableLiveData<CharSequence> note;
 
-  private CreatePaymentViewModel(@NonNull PayeeParcelable payee, @Nullable CharSequence note) {
+  CreatePaymentViewModel(@NonNull PayeeParcelable payee, @Nullable CharSequence note) {
     this.payee            = payee;
     this.spendableBalance = Transformations.map(SignalStore.payments().liveMobileCoinBalance(), Balance::getTransferableAmount);
     this.note             = new MutableLiveData<>(note);
@@ -93,33 +93,14 @@ public class CreatePaymentViewModel extends ViewModel {
     inputState.update(liveExchangeRate, (rate, state) -> updateAmount(AppDependencies.getApplication(), state.updateExchangeRate(rate), AmountKeyboardGlyph.NONE));
   }
 
-  @NonNull LiveData<Boolean> getEnclaveFailure() {
-    return enclaveFailure;
-  }
-
-  @NonNull LiveData<InputState> getInputState() {
-    return inputState.getStateLiveData();
-  }
-
-  @NonNull LiveData<Boolean> getIsPaymentsSupportedByPayee() {
-    return isPaymentsSupportedByPayee;
-  }
-
-  @NonNull LiveData<CharSequence> getNote() {
-    return Transformations.distinctUntilChanged(note);
-  }
-
-  @NonNull LiveData<Boolean> isValidAmount() {
-    return isValidAmount;
-  }
-
-  @NonNull LiveData<Boolean> getCanSendPayment() {
-    return isValidAmount;
-  }
-
-  @NonNull LiveData<Money> getSpendableBalance() {
-    return spendableBalance;
-  }
+  @NonNull LiveData<Boolean> getEnclaveFailure() { return enclaveFailure; }
+  @NonNull LiveData<InputState> getInputState() { return inputState.getStateLiveData(); }
+  public @NonNull String getCurrentMoneyAmountForCashu() { return inputState.getState().getMoneyAmount(); }
+  @NonNull LiveData<Boolean> getIsPaymentsSupportedByPayee() { return isPaymentsSupportedByPayee; }
+  @NonNull LiveData<CharSequence> getNote() { return Transformations.distinctUntilChanged(note); }
+  @NonNull LiveData<Boolean> isValidAmount() { return isValidAmount; }
+  @NonNull LiveData<Boolean> getCanSendPayment() { return isValidAmount; }
+  @NonNull LiveData<Money> getSpendableBalance() { return spendableBalance; }
 
   void clearAmount() {
     inputState.update(s -> {
@@ -130,17 +111,9 @@ public class CreatePaymentViewModel extends ViewModel {
     });
   }
 
-  void toggleMoneyInputTarget() {
-    inputState.update(s -> s.updateInputTarget(s.getInputTarget().next()));
-  }
-
-  void setNote(@Nullable CharSequence note) {
-    this.note.setValue(note);
-  }
-
-  void updateAmount(@NonNull Context context, @NonNull AmountKeyboardGlyph glyph) {
-    inputState.update(s -> updateAmount(context, s, glyph));
-  }
+  void toggleMoneyInputTarget() { inputState.update(s -> s.updateInputTarget(s.getInputTarget().next())); }
+  void setNote(@Nullable CharSequence note) { this.note.setValue(note); }
+  void updateAmount(@NonNull Context context, @NonNull AmountKeyboardGlyph glyph) { inputState.update(s -> updateAmount(context, s, glyph)); }
 
   private @NonNull InputState updateAmount(@NonNull Context context, @NonNull InputState inputState, @NonNull AmountKeyboardGlyph glyph) {
     switch (inputState.getInputTarget()) {
