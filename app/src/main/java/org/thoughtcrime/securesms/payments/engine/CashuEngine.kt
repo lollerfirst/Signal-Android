@@ -158,12 +158,12 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
       }
     }.getOrDefault(emptyList())
 
-    // Add pending top-ups as 0-sat placeholder entries
+    // Add pending top-ups with requested amount for display
     val pending = pendingStore.list().map {
       Tx(
         id = it.id ?: (it.invoice ?: ("pending-" + it.createdAtMs)),
         timestampMs = it.createdAtMs,
-        amountSats = 0L,
+        amountSats = it.amountSats, // show intended amount instead of 0
         memo = "Pending top-up ${it.amountSats} sat"
       )
     }

@@ -87,7 +87,9 @@ public final class PaymentsAddMoneyFragment extends LoggingFragment {
             walletAddressAbbreviated.setText(qrText);
             qrImageView.setQrText(qrText);
             info.setText("To add funds, pay this lightning invoice.");
-            Toast.makeText(requireContext(), "Invoice ready", Toast.LENGTH_SHORT).show();
+            // Notify home to refresh recent activity
+            getParentFragmentManager().setFragmentResult("cashu_history_changed", new Bundle());
+
           });
         }).start();
       });

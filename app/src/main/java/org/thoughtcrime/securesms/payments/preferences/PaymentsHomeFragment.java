@@ -147,24 +147,22 @@ public class PaymentsHomeFragment extends LoggingFragment {
       }
     });
 
-    viewModel.getList().observe(getViewLifecycleOwner(), list -> {
-      boolean hadPaymentItems = Stream.of(adapter.getCurrentList()).anyMatch(model -> model instanceof PaymentItem);
-
-      if (!hadPaymentItems) {
-        adapter.submitList(list, () -> recycler.scrollToPosition(0));
-      } else {
-        adapter.submitList(list);
+    // Listen for Cashu history changes while this Fragment is active
+    getParentFragmentManager().setFragmentResultListener("cashu_history_changed", this, (requestKey, bundle) -> {
+      if (viewModel != null && viewModel.isCashuEnabled()) {
+        viewModel.refreshCashuActivity();
       }
     });
 
-    viewModel.getPaymentsEnabled().observe(getViewLifecycleOwner(), enabled -> {
-      if (enabled) {
-        toolbar.inflateMenu(R.menu.payments_home_fragment_menu);
-      } else {
-        toolbar.getMenu().clear();
-      }
-      header.setVisibility(enabled ? View.VISIBLE : View.GONE);
-    });
+      // Ensure list updates respond smoothly
+      viewModel.getList().observe(getViewLifecycleOwner(), list -> {
+        boolean hadPaymentItems = com.annimon.stream.Stream.of(adapter.getCurrentList()).anyMatch(model -> model instanceof org.thoughtcrime.securesms.payments.preferences.model.PaymentItem);
+        if (!hadPaymentItems) {
+          adapter.submitList(list, () -> recycler.scrollToPosition(0));
+        } else {
+          adapter.submitList(list);
+        }
+      });
 
     // Only observe MobileCoin balance when Cashu is not enabled
     if (!viewModel.isCashuEnabled()) {
@@ -296,6 +294,10 @@ public class PaymentsHomeFragment extends LoggingFragment {
   public void onResume() {
     super.onResume();
     viewModel.checkPaymentActivationState();
+    // Ensure Cashu recent activity refreshes after returning from Add Money or background
+    if (viewModel != null && viewModel.isCashuEnabled()) {
+      viewModel.updateStore();
+    }
   }
 
   private void showUpdateIsRequiredDialog() {

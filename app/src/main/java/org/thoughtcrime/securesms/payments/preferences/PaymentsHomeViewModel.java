@@ -4,11 +4,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.util.Pair;
 
-import androidx.lifecycle.Observer;
-
-import androidx.lifecycle.MediatorLiveData;
-
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Transformations;
 import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
@@ -18,9 +15,6 @@ import com.annimon.stream.Stream;
 import org.signal.core.util.logging.Log;
 import org.signal.core.util.money.FiatMoney;
 import org.thoughtcrime.securesms.R;
-import org.thoughtcrime.securesms.payments.preferences.model.CashuActivityItem;
-import java.util.ArrayList;
-
 import org.thoughtcrime.securesms.components.settings.SettingHeader;
 import org.thoughtcrime.securesms.dependencies.AppDependencies;
 import org.thoughtcrime.securesms.keyvalue.PaymentsAvailability;
@@ -32,11 +26,12 @@ import org.thoughtcrime.securesms.payments.UnreadPaymentsRepository;
 import org.thoughtcrime.securesms.payments.currency.CurrencyExchange;
 import org.thoughtcrime.securesms.payments.currency.CurrencyExchangeRepository;
 import org.thoughtcrime.securesms.payments.engine.CashuUiRepository;
+import org.thoughtcrime.securesms.payments.preferences.model.CashuActivityItem;
 import org.thoughtcrime.securesms.payments.preferences.model.InProgress;
 import org.thoughtcrime.securesms.payments.preferences.model.InfoCard;
-import org.thoughtcrime.securesms.payments.preferences.model.PaymentItem;
 import org.thoughtcrime.securesms.payments.preferences.model.IntroducingPayments;
 import org.thoughtcrime.securesms.payments.preferences.model.NoRecentActivity;
+import org.thoughtcrime.securesms.payments.preferences.model.PaymentItem;
 import org.thoughtcrime.securesms.util.AsynchronousCallback;
 import org.thoughtcrime.securesms.util.SingleLiveEvent;
 import org.thoughtcrime.securesms.util.adapter.mapping.MappingModelList;
@@ -44,6 +39,7 @@ import org.thoughtcrime.securesms.util.livedata.LiveDataUtil;
 import org.thoughtcrime.securesms.util.livedata.Store;
 import org.whispersystems.signalservice.api.payments.Money;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -69,6 +65,7 @@ public class PaymentsHomeViewModel extends ViewModel {
 
   // Cashu additions
   private final boolean cashuEnabled;
+  private final MutableLiveData<Object> cashuRefresh = new MutableLiveData<>(new Object());
   private final CashuUiRepository cashuUiRepository;
   private final LiveData<Long> cashuSatsBalance;
   private final LiveData<String> cashuFiatText;
@@ -96,8 +93,9 @@ public class PaymentsHomeViewModel extends ViewModel {
     this.cashuUiRepository          = new CashuUiRepository(AppDependencies.getApplication());
     this.cashuSatsBalance           = LiveDataUtil.mapAsync(store.getStateLiveData(), s -> cashuUiRepository.getSpendableSatsBlocking());
     this.cashuFiatText              = LiveDataUtil.mapAsync(this.cashuSatsBalance, sats -> cashuUiRepository.satsToFiatStringBlocking(sats));
-    this.cashuRecentActivity        = LiveDataUtil.mapAsync(store.getStateLiveData(), s -> {
-      // Fetch and map Cashu history off main thread; use larger limit to ensure we find synthetic items
+
+    // Fetch and map Cashu history off main thread based on an explicit refresh trigger
+    this.cashuRecentActivity        = LiveDataUtil.mapAsync(cashuRefresh, o -> {
       try {
         java.util.List<org.thoughtcrime.securesms.payments.engine.Tx> txs = org.thoughtcrime.securesms.payments.engine.CashuUiInteractor.listHistoryBlocking(AppDependencies.getApplication(), 0, 50);
         java.util.List<CashuActivityItem> items = new ArrayList<>();
@@ -116,7 +114,6 @@ public class PaymentsHomeViewModel extends ViewModel {
       }
     });
 
-
     // Build UI list whenever either store state or Cashu activity changes
     androidx.lifecycle.LiveData<androidx.core.util.Pair<PaymentsHomeState, java.util.List<CashuActivityItem>>> combined =
         org.thoughtcrime.securesms.util.livedata.LiveDataUtil.combineLatest(store.getStateLiveData(), cashuRecentActivity, androidx.core.util.Pair::new);
@@ -130,6 +127,11 @@ public class PaymentsHomeViewModel extends ViewModel {
                                                                                   liveExchangeRate,
                                                                                   (balance, exchangeRate) -> exchangeRate.exchange(balance));
     this.store.update(liveExchangeAmount, (amount, state) -> state.updateCurrencyAmount(amount.orElse(null)));
+
+    if (this.cashuEnabled) {
+      // Ensure we load Cashu activity immediately
+      this.cashuRefresh.postValue(new Object());
+    }
 
     refreshExchangeRates(true);
   }
@@ -267,6 +269,11 @@ public class PaymentsHomeViewModel extends ViewModel {
                                            .toList();
 
     return state.updatePayments(paymentItems, payments.size());
+  }
+
+  // Public: explicit refresh for Cashu recent activity
+  public void refreshCashuActivity() {
+    if (cashuEnabled) cashuRefresh.postValue(new Object());
   }
 
   public void updateStore() {
