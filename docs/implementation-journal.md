@@ -30,3 +30,56 @@ Author: Goose
 ### 2025-10-01 (cont.)
 - Add CashuUiRepository to bridge engine sats balance and show fiat using Coinbase FX; provides blocking helpers for legacy UI.
 - Wire step: PaymentsHomeViewModel exposes cashu sats LiveData and fiat string; PaymentsHomeFragment displays fiat string when Cashu is enabled. Build succeeds for :Signal-Android:assembleDebug.
+
+## 2025-10-02
+
+Summary of progress and fixes
+
+1) Engine and UI wiring
+- PaymentsEngine + CashuEngine integrated with CDK Kotlin WalletSqliteDatabase and BIP39 mnemonic manager.
+- PaymentsEngineProvider selects CashuEngine when SignalStore.payments.cashuEnabled() or DEBUG.
+- Sats-first header with Coinbase FX estimate via CashuUiRepository; one-shot MintWatcher check on header refresh.
+
+2) Add Money flow (Cashu)
+- Inline amount entry + “Get invoice” button.
+- On quote: persist pending via PendingMintStore; show BOLT11 invoice text + QR and guidance.
+- MintWatcher polls pending quotes, attempts mint when paid; balance updated.
+
+3) Recent Activity
+- Show synthetic items from Cashu first (capped to 5 total):
+  - "Pending top-up <amount> sat"
+  - "Top-up completed"
+- Avoid blocking UI: Cashu history fetched off main thread (mapAsync) and combined with store state to recompute list when data arrives; show InProgress while loading.
+
+4) Crash/ANR fixes
+- Fixed crash: No view holder factory for InfoCard → register InfoCard in PaymentsHomeAdapter.
+- Avoided ANR: moved Cashu history retrieval off main thread; recompute list on background result.
+
+5) Stores and pruning
+- PendingMintStore:
+  - Dedupe by id/invoice on add.
+  - Prune on read/list: drop minted or expired quotes; normalize expiresAt if persisted in seconds; sort by createdAtMs desc; cap to 200; persist pruning.
+- CashuHistoryStore:
+  - Dedupe by id (keep latest timestamp); sort desc; cap to 500; persist pruning on read/add.
+
+6) Known issues addressed
+- Pending top-ups disappearing due to expiry unit mismatch: fixed by normalizing expiresAt.
+- InfoCard mapping crash fixed.
+- "Signal isn’t responding" dialog eliminated in Payments due to moving work off main thread.
+
+7) Build status
+- PlayStagingDebug and PlayProdDebug compile after fixes.
+
+8) Next steps
+- Event-based mint status (subscribe to BOLT11_MINT_QUOTE) to remove polling.
+- Full CDK transaction mapping and unified history (replace synthetic items).
+- Send token via Signal message; P2PK/NUT-07 plumbing.
+- Backup export/import integration with encryption.
+- Add optional debug toggles: mint URL, force cashuEnabled, prune now.
+- UI polish: detail view for Cashu entries; copy invoice button; lifecycle scope for MintWatcher.
+
+Representative commits
+- Payments: fix InfoCard mapping crash; avoid ANR by moving Cashu history off main thread, recompute list when Cashu data arrives; show InProgress while loading; keep UI cap to 5 (Cashu first).
+- Cashu: PendingMintStore pruning and cap size (remove expired/minted, dedupe by id/invoice, cap to 200, persist pruning on read).
+- Cashu: CashuHistoryStore prune/dedupe/cap list (dedupe by id, keep latest, cap to 500, persist pruning on read & add).
+- Cashu: PendingMintStore prune fix - normalize expiresAtMs if persisted in seconds to avoid over-pruning valid invoices.
