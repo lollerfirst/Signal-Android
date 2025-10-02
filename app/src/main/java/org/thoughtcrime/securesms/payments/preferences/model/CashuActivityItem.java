@@ -53,9 +53,9 @@ public final class CashuActivityItem implements MappingModel<CashuActivityItem> 
       case SENT:
         String name = peerDisplayName != null ? peerDisplayName : context.getString(R.string.CashuActivity__unknown);
         return context.getString(R.string.CashuActivity__sent_to_s, name);
-      case COMPLETED:
-        return context.getString(R.string.CashuActivity__top_up_completed);
-      case PENDING:
+      case RECEIVED:
+        String rname = peerDisplayName != null ? peerDisplayName : context.getString(R.string.CashuActivity__unknown);
+        return context.getString(R.string.CashuActivity__received_from_s, rname);
       default:
         return context.getString(R.string.CashuActivity__pending_top_up);
     }

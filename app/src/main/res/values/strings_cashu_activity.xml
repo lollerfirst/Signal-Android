@@ -3,4 +3,5 @@
   <string name="CashuActivity__top_up_completed">Top-up completed</string>
   <string name="CashuActivity__pending_top_up">Pending top-up</string>
   <string name="CashuActivity__unknown">Unknown</string>
+  <string name="CashuActivity__received_from_s">Received from %1$s</string>
 </resources>
