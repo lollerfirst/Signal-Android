@@ -88,7 +88,6 @@ object CashuTokenInlineRenderer {
       val engine = org.thoughtcrime.securesms.payments.engine.PaymentsEngineProvider.get(AppDependencies.application)
       val result = kotlinx.coroutines.runBlocking { engine.importToken(token) }
       result.onSuccess { r ->
-        // Record for recent activity
         val peer = conversationMessage.messageRecord.fromRecipient
         val memo = "Received from|rid:" + peer.id.serialize() + "|name:" + peer.getDisplayName(ctx).replace("|", "\u2758")
         try {
@@ -96,14 +95,15 @@ object CashuTokenInlineRenderer {
             org.thoughtcrime.securesms.payments.engine.CashuReceiveStore.Received(null, r.addedSats, System.currentTimeMillis(), memo)
           )
         } catch (_: Throwable) {}
-        // Feedback
         label.text = ctx.getString(R.string.cashu_token_received_sats, r.addedSats)
+        // Keep spinner for a brief moment for perceived stability
+        spinner.postDelayed({ spinner.visibility = View.GONE }, 400)
       }.onFailure {
         label.text = ctx.getString(R.string.cashu_token_receive_failed)
-        receiveContainer.isEnabled = true
+        spinner.visibility = View.GONE
         receiveIcon.visibility = View.VISIBLE
+        receiveContainer.isEnabled = true
       }
-      spinner.visibility = View.GONE
     }
 
     // Insert below the body text

@@ -33,7 +33,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:contentDescription="@string/cashu_token_receive"
-            android:background="@drawable/download_attachment"
+            android:src="@drawable/symbol_arrow_down_tint_24"
+            android:scaleType="center"
             android:visibility="visible" />
 
         <ProgressBar
