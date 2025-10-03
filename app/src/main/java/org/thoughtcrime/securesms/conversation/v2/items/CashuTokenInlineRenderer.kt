@@ -59,7 +59,9 @@ object CashuTokenInlineRenderer {
     val bar = View.inflate(ctx, R.layout.cashu_token_receive_bar, null)
     bar.id = R.id.cashu_token_receive_bar
     val label = bar.findViewById<TextView>(R.id.cashu_token_label)
-    val receive = bar.findViewById<Button>(R.id.cashu_token_receive)
+    val receiveContainer = bar.findViewById<android.view.View>(R.id.cashu_token_receive_container)
+    val receiveIcon = bar.findViewById<android.widget.ImageView>(R.id.cashu_token_receive_icon)
+    val spinner = bar.findViewById<android.widget.ProgressBar>(R.id.cashu_token_receive_spinner)
 
     // Try to decode token value to display sats amount inline
     val sats: Long = try {
@@ -77,7 +79,12 @@ object CashuTokenInlineRenderer {
       label.text = ctx.getString(R.string.cashu_token_label)
     }
 
-    receive.setOnClickListener {
+    // Set up click to receive with icon -> spinner swap
+    receiveContainer.setOnClickListener {
+      receiveContainer.isEnabled = false
+      receiveIcon.visibility = View.GONE
+      spinner.visibility = View.VISIBLE
+
       val engine = org.thoughtcrime.securesms.payments.engine.PaymentsEngineProvider.get(AppDependencies.application)
       val result = kotlinx.coroutines.runBlocking { engine.importToken(token) }
       result.onSuccess { r ->
@@ -91,10 +98,12 @@ object CashuTokenInlineRenderer {
         } catch (_: Throwable) {}
         // Feedback
         label.text = ctx.getString(R.string.cashu_token_received_sats, r.addedSats)
-        receive.isEnabled = false
       }.onFailure {
         label.text = ctx.getString(R.string.cashu_token_receive_failed)
+        receiveContainer.isEnabled = true
+        receiveIcon.visibility = View.VISIBLE
       }
+      spinner.visibility = View.GONE
     }
 
     // Insert below the body text

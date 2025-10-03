@@ -8,7 +8,10 @@
     android:paddingStart="12dp"
     android:paddingEnd="8dp"
     android:paddingTop="6dp"
-    android:paddingBottom="4dp">
+    android:paddingBottom="6dp"
+    android:background="@color/signal_colorSurfaceVariant"
+    android:clipToPadding="false"
+    android:clipChildren="false">
 
     <TextView
         android:id="@+id/cashu_token_label"
@@ -19,11 +22,27 @@
         android:textColor="@color/signal_text_primary"
         tools:text="10,000 sat" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/cashu_token_receive"
-        style="@style/Widget.MaterialComponents.Button.TextButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/cashu_token_receive"/>
+    <FrameLayout
+        android:id="@+id/cashu_token_receive_container"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="8dp">
+
+        <ImageView
+            android:id="@+id/cashu_token_receive_icon"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="@string/cashu_token_receive"
+            android:background="@drawable/download_attachment"
+            android:visibility="visible" />
+
+        <ProgressBar
+            android:id="@+id/cashu_token_receive_spinner"
+            style="@style/Widget.AppCompat.ProgressBar.Small"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:indeterminate="true"
+            android:visibility="gone" />
+    </FrameLayout>
 
 </LinearLayout>
