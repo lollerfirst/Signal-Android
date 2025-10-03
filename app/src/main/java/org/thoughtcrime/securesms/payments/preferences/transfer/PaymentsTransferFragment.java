@@ -44,12 +44,13 @@ public final class PaymentsTransferFragment extends LoggingFragment {
     Toolbar toolbar = view.findViewById(R.id.payments_transfer_toolbar);
 
     view.findViewById(R.id.payments_transfer_scan_qr).setOnClickListener(v -> scanQrCode());
-    view.findViewById(R.id.payments_transfer_next).setOnClickListener(v -> next(viewModel.getOwnAddress()));
+    view.findViewById(R.id.payments_transfer_next).setOnClickListener(v -> next());
 
     address = view.findViewById(R.id.payments_transfer_to_address);
+    address.setHint(R.string.PaymentsPayInvoice__paste_invoice);
     address.setOnEditorActionListener((v, actionId, event) -> {
       if (actionId == EditorInfo.IME_ACTION_DONE) {
-        return next(viewModel.getOwnAddress());
+        return next();
       }
       return false;
     });
@@ -62,34 +63,23 @@ public final class PaymentsTransferFragment extends LoggingFragment {
     });
   }
 
-  private boolean next(@NonNull MobileCoinPublicAddress ownAddress) {
-    try {
-      String                  base58Address = address.getText().toString();
-      MobileCoinPublicAddress publicAddress = MobileCoinPublicAddress.fromBase58(base58Address);
-
-      if (ownAddress.equals(publicAddress)) {
-        new MaterialAlertDialogBuilder(requireContext())
-                       .setTitle(R.string.PaymentsTransferFragment__invalid_address)
-                       .setMessage(R.string.PaymentsTransferFragment__you_cant_transfer_to_your_own_signal_wallet_address)
-                       .setPositiveButton(android.R.string.ok, null)
-                       .show();
-        return false;
-      }
-
-      NavDirections action = PaymentsTransferFragmentDirections.actionPaymentsTransferToCreatePayment(new PayeeParcelable(publicAddress))
-                                                               .setFinishOnConfirm(PaymentsTransferFragmentArgs.fromBundle(requireArguments()).getFinishOnConfirm());
-
-      SafeNavigation.safeNavigate(Navigation.findNavController(requireView()), action);
-      return true;
-    } catch (MobileCoinPublicAddress.AddressException e) {
-      Log.w(TAG, "Address is not valid", e);
+  private boolean next() {
+    String invoice = address.getText().toString().trim();
+    if (invoice.isEmpty()) {
       new MaterialAlertDialogBuilder(requireContext())
-                     .setTitle(R.string.PaymentsTransferFragment__invalid_address)
-                     .setMessage(R.string.PaymentsTransferFragment__check_the_wallet_address)
-                     .setPositiveButton(android.R.string.ok, null)
-                     .show();
+          .setTitle(R.string.PaymentsTransferFragment__invalid_address)
+          .setMessage(R.string.PaymentsPayInvoice__paste_invoice)
+          .setPositiveButton(android.R.string.ok, null)
+          .show();
       return false;
     }
+
+    // Navigate to a dedicated PayInvoice confirm screen (to be added), for now show a placeholder toast
+    Toast.makeText(requireContext(), R.string.PaymentsPayInvoice__requesting_quote, Toast.LENGTH_SHORT).show();
+
+    // TODO: Call PaymentsEngine.requestMeltQuote(invoice) asynchronously, then navigate to confirmation fragment
+
+    return true;
   }
 
   private void scanQrCode() {

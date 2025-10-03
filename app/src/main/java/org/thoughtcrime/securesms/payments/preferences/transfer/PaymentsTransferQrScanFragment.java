@@ -63,10 +63,11 @@ public final class PaymentsTransferQrScanFragment extends LoggingFragment {
         .observeOn(AndroidSchedulers.mainThread())
         .subscribe(data -> {
           try {
-            viewModel.postQrData(MobileCoinPublicAddress.fromQr(data).getPaymentAddressBase58());
+            // Accept any QR text as a potential BOLT11 invoice for Cashu withdrawals
+            viewModel.postQrData(data);
             SafeNavigation.safeNavigate(Navigation.findNavController(requireView()), R.id.action_paymentsScanQr_pop);
-          } catch (MobileCoinPublicAddress.AddressException e) {
-            Log.e(TAG, "Not a valid address");
+          } catch (Throwable e) {
+            Log.e(TAG, "Invalid QR payload", e);
           }
         });
 
