@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cashudevkit.Amount
 import org.cashudevkit.CurrencyUnit
+import org.cashudevkit.MintUrl
 import org.cashudevkit.PreparedSend
 import org.cashudevkit.ReceiveOptions
 import org.cashudevkit.SendKind
@@ -33,6 +34,7 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
   private val mnemonicManager by lazy { CashuMnemonicManager(appContext) }
   private val pendingStore by lazy { PendingMintStore(appContext) }
   private val historyStore by lazy { CashuHistoryStore(appContext) }
+  private val withdrawalStore by lazy { CashuWithdrawalStore(appContext) }
 
   private var db: WalletSqliteDatabase? = null
   private var wallet: Wallet? = null
@@ -146,29 +148,19 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
 
   override suspend fun listHistory(offset: Int, limit: Int): List<Tx> = withContext(Dispatchers.IO) {
     ensureInitialized()
-    val onchain = runCatching {
-      (wallet!!.listTransactions(null) as List<*>).drop(offset).take(limit).map { it as Transaction }.map { tx ->
-        val amt = tx.amount.value.toLong()
-        Tx(
-          id = tx.id.hex,
-          timestampMs = System.currentTimeMillis(),
-          amountSats = amt,
-          memo = null
-        )
-      }
-    }.getOrDefault(emptyList())
+
+    val onchain = emptyList<Tx>()
 
     // Add pending top-ups with requested amount for display
     val pending = pendingStore.list().map {
       Tx(
         id = it.id ?: (it.invoice ?: ("pending-" + it.createdAtMs)),
         timestampMs = it.createdAtMs,
-        amountSats = it.amountSats, // show intended amount instead of 0
+        amountSats = it.amountSats,
         memo = "Pending top-up ${it.amountSats} sat"
       )
     }
 
-    // Completed top-ups synthesized from local history (until CDK exposes full TX list we can map)
     val completed = historyStore.list().map {
       Tx(
         id = it.id ?: ("topup-" + it.timestampMs),
@@ -178,27 +170,34 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
       )
     }
 
-    // Include locally recorded outgoing sent ecash
     val sent = CashuSendStore(appContext).list().map {
       Tx(
         id = it.id ?: ("sent-" + it.timestampMs),
         timestampMs = it.timestampMs,
-        amountSats = -it.amountSats, // negative for outgoing
+        amountSats = -it.amountSats,
         memo = it.memo ?: "Sent ecash"
       )
     }
 
-    // Include locally recorded incoming received ecash
     val received = CashuReceiveStore(appContext).list().map {
       Tx(
         id = it.id ?: ("recv-" + it.timestampMs),
         timestampMs = it.timestampMs,
-        amountSats = it.amountSats, // positive for incoming
+        amountSats = it.amountSats,
         memo = it.memo ?: "Received from"
       )
     }
 
-    (completed + pending + sent + received + onchain).sortedByDescending { it.timestampMs }
+    val withdrawals = withdrawalStore.list().map {
+      Tx(
+        id = it.id ?: ("wd-" + it.timestampMs),
+        timestampMs = it.timestampMs,
+        amountSats = - (it.amountSats + it.feeSats),
+        memo = it.memo ?: "Withdrawal"
+      )
+    }
+
+    (completed + pending + sent + received + withdrawals + onchain).sortedByDescending { it.timestampMs }
   }
 
   override suspend fun backupExport(): EncryptedBlob = withContext(Dispatchers.IO) {
@@ -240,6 +239,41 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
     }
   }
 
-  // Temporary exposure for UI helper; in production expose a narrower surface
+  // Lightning withdrawal (melt) with real fields
+  override suspend fun requestMeltQuote(invoiceBolt11: String): Result<MeltQuote> = withContext(Dispatchers.IO) {
+    ensureInitialized()
+    runCatching {
+      val cdkQuote = wallet!!.meltQuote(invoiceBolt11, null) as org.cashudevkit.MeltQuote
+      val amountSats = (cdkQuote.amount as Amount).value.toLong()
+      val feeReserveSats = (cdkQuote.feeReserve as Amount).value.toLong()
+      MeltQuote(
+        amountSats = amountSats,
+        feeSats = feeReserveSats,
+        totalSats = amountSats + feeReserveSats,
+        expiresAtMs = cdkQuote.expiry.toLong(),
+        invoiceBolt11 = cdkQuote.request,
+        id = cdkQuote.id
+      )
+    }
+  }
+
+  override suspend fun melt(quote: MeltQuote): Result<TxId> = withContext(Dispatchers.IO) {
+    ensureInitialized()
+    runCatching {
+      val quoteId = quote.id ?: throw IllegalStateException("Missing melt quote id")
+      val melted = wallet!!.melt(quoteId) as org.cashudevkit.Melted
+      val paidAmountSats = (melted.amount as Amount).value.toLong()
+      val feePaidSats = (melted.feePaid as Amount).value.toLong()
+      withdrawalStore.add(CashuWithdrawalStore.Withdrawal(
+        id = quoteId,
+        amountSats = paidAmountSats,
+        feeSats = feePaidSats,
+        timestampMs = System.currentTimeMillis(),
+        memo = "Withdrawal"
+      ))
+      TxId(quoteId)
+    }
+  }
+
   fun getCdkWalletUnsafe(): Wallet? = wallet
 }

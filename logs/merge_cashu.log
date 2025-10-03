@@ -1,0 +1,113 @@
+
+> Configure project :build-logic:plugins
+WARNING: Unsupported Kotlin plugin version.
+The `embedded-kotlin` and `kotlin-dsl` plugins rely on features of Kotlin `2.0.20` that might work differently than in the requested version `2.2.20`.
+
+> Configure project :benchmark
+WARNING: The option setting 'android.experimental.androidTest.numManagedDeviceShards=4' is experimental.
+
+> Task :build-logic:plugins:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :build-logic:tools:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :build-logic:tools:compileKotlin UP-TO-DATE
+> Task :build-logic:tools:compileJava NO-SOURCE
+> Task :build-logic:tools:processResources NO-SOURCE
+> Task :build-logic:tools:classes UP-TO-DATE
+> Task :build-logic:tools:jar UP-TO-DATE
+> Task :build-logic:plugins:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :build-logic:plugins:extractPluginRequests UP-TO-DATE
+> Task :build-logic:plugins:generatePluginAdapters UP-TO-DATE
+> Task :build-logic:plugins:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :build-logic:plugins:compilePluginsBlocks UP-TO-DATE
+> Task :build-logic:plugins:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :build-logic:plugins:generateScriptPluginAdapters UP-TO-DATE
+> Task :build-logic:plugins:compileKotlin UP-TO-DATE
+> Task :build-logic:plugins:compileJava UP-TO-DATE
+> Task :build-logic:plugins:compileGroovy NO-SOURCE
+> Task :build-logic:plugins:compileGroovyPlugins UP-TO-DATE
+> Task :build-logic:plugins:pluginDescriptors UP-TO-DATE
+> Task :build-logic:plugins:processResources UP-TO-DATE
+> Task :build-logic:plugins:classes UP-TO-DATE
+> Task :build-logic:plugins:jar UP-TO-DATE
+
+> Configure project :microbenchmark
+WARNING: BuildType 'debug' is both debuggable and has 'isMinifyEnabled' set to true.
+All code optimizations and obfuscation are disabled for debuggable builds.
+
+> Task :billing:preBuild UP-TO-DATE
+> Task :billing:preDebugBuild UP-TO-DATE
+> Task :billing:generateDebugResValues UP-TO-DATE
+> Task :billing:generateDebugResources UP-TO-DATE
+> Task :billing:packageDebugResources UP-TO-DATE
+> Task :contacts:preBuild UP-TO-DATE
+> Task :contacts:preDebugBuild UP-TO-DATE
+> Task :contacts:generateDebugResValues UP-TO-DATE
+> Task :contacts:generateDebugResources UP-TO-DATE
+> Task :contacts:packageDebugResources UP-TO-DATE
+> Task :core-ui:preBuild UP-TO-DATE
+> Task :core-ui:preDebugBuild UP-TO-DATE
+> Task :core-ui:generateDebugResValues UP-TO-DATE
+> Task :core-ui:generateDebugResources UP-TO-DATE
+> Task :core-ui:packageDebugResources UP-TO-DATE
+> Task :core-util:preBuild UP-TO-DATE
+> Task :core-util:preDebugBuild UP-TO-DATE
+> Task :core-util:generateDebugResValues UP-TO-DATE
+> Task :core-util:generateDebugResources UP-TO-DATE
+> Task :core-util:packageDebugResources UP-TO-DATE
+> Task :debuglogs-viewer:preBuild UP-TO-DATE
+> Task :debuglogs-viewer:preDebugBuild UP-TO-DATE
+> Task :debuglogs-viewer:generateDebugResValues UP-TO-DATE
+> Task :debuglogs-viewer:generateDebugResources UP-TO-DATE
+> Task :debuglogs-viewer:packageDebugResources UP-TO-DATE
+> Task :device-transfer:preBuild UP-TO-DATE
+> Task :device-transfer:preDebugBuild UP-TO-DATE
+> Task :device-transfer:generateDebugResValues UP-TO-DATE
+> Task :device-transfer:generateDebugResources UP-TO-DATE
+> Task :device-transfer:packageDebugResources UP-TO-DATE
+> Task :donations:preBuild UP-TO-DATE
+> Task :donations:preDebugBuild UP-TO-DATE
+> Task :donations:generateDebugResValues UP-TO-DATE
+> Task :donations:generateDebugResources UP-TO-DATE
+> Task :donations:packageDebugResources UP-TO-DATE
+> Task :glide-config:preBuild UP-TO-DATE
+> Task :glide-config:preDebugBuild UP-TO-DATE
+> Task :glide-config:generateDebugResValues UP-TO-DATE
+> Task :glide-config:generateDebugResources UP-TO-DATE
+> Task :glide-config:packageDebugResources UP-TO-DATE
+> Task :image-editor:preBuild UP-TO-DATE
+> Task :image-editor:preDebugBuild UP-TO-DATE
+> Task :image-editor:generateDebugResValues UP-TO-DATE
+> Task :image-editor:generateDebugResources UP-TO-DATE
+> Task :image-editor:packageDebugResources UP-TO-DATE
+> Task :paging:preBuild UP-TO-DATE
+> Task :paging:preDebugBuild UP-TO-DATE
+> Task :paging:generateDebugResValues UP-TO-DATE
+> Task :paging:generateDebugResources UP-TO-DATE
+> Task :paging:packageDebugResources UP-TO-DATE
+> Task :photoview:preBuild UP-TO-DATE
+> Task :photoview:preDebugBuild UP-TO-DATE
+> Task :photoview:generateDebugResValues UP-TO-DATE
+> Task :photoview:generateDebugResources UP-TO-DATE
+> Task :photoview:packageDebugResources UP-TO-DATE
+> Task :qr:preBuild UP-TO-DATE
+> Task :qr:preDebugBuild UP-TO-DATE
+> Task :qr:generateDebugResValues UP-TO-DATE
+> Task :qr:generateDebugResources UP-TO-DATE
+> Task :qr:packageDebugResources UP-TO-DATE
+> Task :Signal-Android:preBuild UP-TO-DATE
+> Task :Signal-Android:prePlayProdDebugBuild UP-TO-DATE
+> Task :Signal-Android:generatePlayProdDebugResValues UP-TO-DATE
+> Task :Signal-Android:generatePlayProdDebugResources UP-TO-DATE
+> Task :sticky-header-grid:preBuild UP-TO-DATE
+> Task :sticky-header-grid:preDebugBuild UP-TO-DATE
+> Task :sticky-header-grid:generateDebugResValues UP-TO-DATE
+> Task :sticky-header-grid:generateDebugResources UP-TO-DATE
+> Task :sticky-header-grid:packageDebugResources UP-TO-DATE
+> Task :video:preBuild UP-TO-DATE
+> Task :video:preDebugBuild UP-TO-DATE
+> Task :video:generateDebugResValues UP-TO-DATE
+> Task :video:generateDebugResources UP-TO-DATE
+> Task :video:packageDebugResources UP-TO-DATE
+> Task :Signal-Android:mergePlayProdDebugResources UP-TO-DATE
+
+BUILD SUCCESSFUL in 5s
+60 actionable tasks: 60 up-to-date

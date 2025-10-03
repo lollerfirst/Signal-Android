@@ -138,6 +138,9 @@ public class PaymentsHomeViewModel extends ViewModel {
               }
             } catch (Throwable ignore) {}
             items.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), sats, CashuActivityItem.State.RECEIVED, peer, name));
+          } else if ("Withdrawal".equals(memo)) {
+            long sats = Math.abs(tx.getAmountSats());
+            items.add(new CashuActivityItem(tx.getId(), tx.getTimestampMs(), -sats, CashuActivityItem.State.SENT, null, null, true));
           }
         }
         return items;

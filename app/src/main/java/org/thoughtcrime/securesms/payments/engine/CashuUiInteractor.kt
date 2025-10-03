@@ -14,6 +14,16 @@ object CashuUiInteractor {
   }
 
   @JvmStatic
+  fun requestMeltQuoteBlocking(context: Context, invoiceBolt11: String): MeltQuote? = runBlocking {
+    PaymentsEngineProvider.get(context).requestMeltQuote(invoiceBolt11).getOrNull()
+  }
+
+  @JvmStatic
+  fun meltBlocking(context: Context, quote: MeltQuote): Boolean = runBlocking {
+    PaymentsEngineProvider.get(context).melt(quote).isSuccess
+  }
+
+  @JvmStatic
   fun createSendTokenBlocking(context: Context, amountSats: Long, memo: String? = null): String? = runBlocking {
     PaymentsEngineProvider.get(context).createSendToken(amountSats, memo).getOrNull()
   }
@@ -28,3 +38,4 @@ object CashuUiInteractor {
     PaymentsEngineProvider.get(context).listHistory(offset, limit)
   }
 }
+

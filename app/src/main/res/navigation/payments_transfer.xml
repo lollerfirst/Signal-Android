@@ -19,6 +19,14 @@
             app:popExitAnim="@anim/fragment_close_exit" />
 
         <action
+            android:id="@+id/action_paymentsTransfer_to_payInvoiceConfirm"
+            app:destination="@id/payInvoiceConfirm"
+            app:enterAnim="@anim/fragment_open_enter"
+            app:exitAnim="@anim/fragment_open_exit"
+            app:popEnterAnim="@anim/fragment_close_enter"
+            app:popExitAnim="@anim/fragment_close_exit" />
+
+        <action
             android:id="@+id/action_paymentsTransfer_to_createPayment"
             app:destination="@id/payments_create"
             app:enterAnim="@anim/fragment_open_enter"
@@ -58,6 +66,11 @@
             app:popUpToInclusive="true" />
 
     </fragment>
+
+    <fragment
+        android:id="@+id/payInvoiceConfirm"
+        android:name="org.thoughtcrime.securesms.payments.preferences.transfer.PayInvoiceConfirmFragment"
+        tools:layout="@layout/pay_invoice_confirm_fragment" />
 
     <include app:graph="@navigation/payments_create" />
 

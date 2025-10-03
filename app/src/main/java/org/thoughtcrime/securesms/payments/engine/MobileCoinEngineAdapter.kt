@@ -19,4 +19,7 @@ class MobileCoinEngineAdapter(private val context: Context) : PaymentsEngine {
   override suspend fun requestMintQuote(amountSats: Long) = Result.failure<MintQuote>(UnsupportedOperationException("Not supported"))
   override suspend fun createSendToken(amountSats: Long, memo: String?) = Result.failure<String>(UnsupportedOperationException("Not supported"))
   override suspend fun mintPaidQuote(secretKey: String): Result<Unit> = Result.failure(UnsupportedOperationException("Not supported"))
+
+  override suspend fun requestMeltQuote(invoiceBolt11: String) = Result.failure<MeltQuote>(UnsupportedOperationException("Not supported"))
+  override suspend fun melt(quote: MeltQuote) = Result.failure<TxId>(UnsupportedOperationException("Not supported"))
 }

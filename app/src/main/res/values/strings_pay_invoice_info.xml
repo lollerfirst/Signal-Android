@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="PaymentsTransferFragment__bolt11_info">Pay a BOLT11 Lightning invoice. Paste the invoice string or scan a QR code to continue.</string>
+</resources>

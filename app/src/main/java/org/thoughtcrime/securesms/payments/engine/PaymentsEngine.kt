@@ -22,6 +22,10 @@ interface PaymentsEngine {
    */
   suspend fun mintPaidQuote(secretKeyOrId: String): Result<Unit>
 
+  // New: Lightning withdrawal (melt)
+  suspend fun requestMeltQuote(invoiceBolt11: String): Result<MeltQuote>
+  suspend fun melt(quote: MeltQuote): Result<TxId>
+
   // New: optionally check a quote status (if engine supports it) and/or record pending
   suspend fun recordPendingMint(quote: MintQuote) {}
 }
@@ -52,5 +56,15 @@ data class MintQuote(
   val totalSats: Long,
   val expiresAtMs: Long,
   val invoiceBolt11: String?,
+  val id: String?
+)
+
+// Lightning withdrawal quote (simplified)
+data class MeltQuote(
+  val amountSats: Long,
+  val feeSats: Long,
+  val totalSats: Long,
+  val expiresAtMs: Long,
+  val invoiceBolt11: String,
   val id: String?
 )

@@ -50,12 +50,13 @@
         tools:ignore="RtlSymmetry" />
 
     <TextView
+        android:id="@+id/payments_transfer_bolt11_info"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
-        android:text="@string/PaymentsTransferFragment__you_can_transfer"
+        android:text="@string/PaymentsTransferFragment__bolt11_info"
         android:textAppearance="@style/TextAppearance.Signal.Body2"
         android:textColor="@color/signal_text_secondary"
         app:layout_constraintEnd_toEndOf="parent"

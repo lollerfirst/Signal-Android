@@ -11,7 +11,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.Toolbar;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.navigation.NavDirections;
 import androidx.navigation.Navigation;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -19,8 +18,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import org.signal.core.util.logging.Log;
 import org.thoughtcrime.securesms.LoggingFragment;
 import org.thoughtcrime.securesms.R;
-import org.thoughtcrime.securesms.payments.MobileCoinPublicAddress;
-import org.thoughtcrime.securesms.payments.preferences.model.PayeeParcelable;
+import org.thoughtcrime.securesms.dependencies.AppDependencies;
 import org.thoughtcrime.securesms.permissions.Permissions;
 import org.thoughtcrime.securesms.util.ViewUtil;
 import org.thoughtcrime.securesms.util.navigation.SafeNavigation;
@@ -74,10 +72,19 @@ public final class PaymentsTransferFragment extends LoggingFragment {
       return false;
     }
 
-    // Navigate to a dedicated PayInvoice confirm screen (to be added), for now show a placeholder toast
     Toast.makeText(requireContext(), R.string.PaymentsPayInvoice__requesting_quote, Toast.LENGTH_SHORT).show();
 
-    // TODO: Call PaymentsEngine.requestMeltQuote(invoice) asynchronously, then navigate to confirmation fragment
+    // Background thread to request melt quote
+    new Thread(() -> {
+      try {
+        org.thoughtcrime.securesms.payments.engine.MeltQuote quote = org.thoughtcrime.securesms.payments.engine.CashuUiInteractor.requestMeltQuoteBlocking(AppDependencies.getApplication(), invoice);
+        if (quote == null) throw new RuntimeException("No quote");
+        Bundle args = PayInvoiceConfirmFragment.argsFromQuote(quote);
+        requireView().post(() -> SafeNavigation.safeNavigate(Navigation.findNavController(requireView()), R.id.action_paymentsTransfer_to_payInvoiceConfirm, args));
+      } catch (Throwable t) {
+        requireView().post(() -> Toast.makeText(requireContext(), R.string.PaymentsPayInvoice__unable_to_pay, Toast.LENGTH_LONG).show());
+      }
+    }).start();
 
     return true;
   }
