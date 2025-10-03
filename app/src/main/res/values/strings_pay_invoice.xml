@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="Payments__pay_invoice">Pay invoice</string>
+  <string name="PaymentsPayInvoice__paste_invoice">Paste Lightning invoice</string>
+  <string name="PaymentsPayInvoice__scan_qr">Scan QR code</string>
+  <string name="PaymentsPayInvoice__requesting_quote">Requesting quote…</string>
+  <string name="PaymentsPayInvoice__confirm_and_pay">Confirm and pay</string>
+  <string name="PaymentsPayInvoice__paying">Paying…</string>
+  <string name="PaymentsPayInvoice__invoice_paid">Invoice paid</string>
+  <string name="PaymentsPayInvoice__unable_to_pay">Unable to pay invoice</string>
+  <string name="PaymentsPayInvoice__invoice_details">Invoice details</string>
+</resources>

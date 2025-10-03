@@ -7,6 +7,7 @@
     tools:viewBindingIgnore="true">
 
     <LinearLayout
+        android:id="@+id/root_column"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="center"
@@ -35,11 +36,34 @@
             android:layout_marginBottom="12dp"
             android:minHeight="44dp" />
 
-
         <FrameLayout
             android:id="@+id/contact_selection_list_fragment_holder"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <View
+            android:id="@+id/payments_recipient_separator"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:background="@color/signal_colorSurfaceVariant" />
+
+        <TextView
+            android:id="@+id/pay_invoice_entry"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:gravity="center_vertical"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:text="@string/Payments__pay_invoice"
+            android:textAppearance="@style/Signal.Text.Body"
+            android:drawableEnd="@drawable/symbol_qrcode_24"
+            android:drawablePadding="8dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true" />
 
     </LinearLayout>
 

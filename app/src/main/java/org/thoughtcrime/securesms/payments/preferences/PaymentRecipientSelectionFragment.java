@@ -45,6 +45,10 @@ public class PaymentRecipientSelectionFragment extends LoggingFragment implement
   public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
     toolbar = view.findViewById(R.id.payment_recipient_selection_fragment_toolbar);
     toolbar.setNavigationOnClickListener(v -> Navigation.findNavController(v).popBackStack());
+    view.findViewById(R.id.pay_invoice_entry).setOnClickListener(v -> {
+      SafeNavigation.safeNavigate(Navigation.findNavController(requireView()), org.thoughtcrime.securesms.payments.preferences.PaymentRecipientSelectionFragmentDirections.actionDirectlyToPaymentsTransfer());
+    });
+
 
     contactFilterView = view.findViewById(R.id.contact_filter_edit_text);
 
