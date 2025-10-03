@@ -230,6 +230,13 @@ public class PaymentsHomeViewModel extends ViewModel {
     return exchangeLoadState;
   }
 
+  // True when exchange rates are loaded (fiat header) AND recent activity has loaded/cached
+  boolean isUiReady(@Nullable MappingModelList listValue) {
+    boolean exchangeReady = getExchangeLoadState().getValue() == LoadState.LOADED;
+    boolean recentReady   = listValue != null && !listValue.isEmpty();
+    return exchangeReady && recentReady;
+  }
+
   void markAllPaymentsSeen() {
     unreadPaymentsRepository.markAllPaymentsSeen();
   }

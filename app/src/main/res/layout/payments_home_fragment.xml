@@ -8,6 +8,27 @@
     android:orientation="vertical"
     tools:viewBindingIgnore="true">
 
+    <!-- Loading overlay -->
+    <FrameLayout
+        android:id="@+id/payments_loading_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@android:color/transparent"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ProgressBar
+            android:id="@+id/payments_loading_spinner"
+            style="@style/Widget.AppCompat.ProgressBar"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:indeterminate="true"
+            android:layout_gravity="center" />
+    </FrameLayout>
+
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/payments_home_fragment_toolbar"
         android:layout_width="match_parent"

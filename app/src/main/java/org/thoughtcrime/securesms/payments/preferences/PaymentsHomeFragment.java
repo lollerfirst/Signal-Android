@@ -198,6 +198,18 @@ public class PaymentsHomeFragment extends LoggingFragment {
       });
     }
 
+    // Show loading overlay until both exchange and recent activity are ready
+    View overlay = view.findViewById(R.id.payments_loading_overlay);
+    androidx.lifecycle.Observer<org.thoughtcrime.securesms.util.adapter.mapping.MappingModelList> listObserver = list -> {
+      boolean ready = viewModel.isUiReady(list);
+      overlay.setVisibility(ready ? View.GONE : View.VISIBLE);
+    };
+    viewModel.getList().observe(getViewLifecycleOwner(), listObserver);
+    viewModel.getExchangeLoadState().observe(getViewLifecycleOwner(), loadState -> {
+      boolean ready = viewModel.isUiReady(viewModel.getList().getValue());
+      overlay.setVisibility(ready ? View.GONE : View.VISIBLE);
+    });
+
     refresh.setOnClickListener(v -> { viewModel.refreshExchangeRates(true); if (viewModel.isCashuEnabled()) viewModel.updateStore(); });
     exchange.setOnClickListener(v -> { viewModel.refreshExchangeRates(true); if (viewModel.isCashuEnabled()) viewModel.updateStore(); });
 
