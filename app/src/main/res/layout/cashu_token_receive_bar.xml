@@ -38,7 +38,6 @@
 
         <ProgressBar
             android:id="@+id/cashu_token_receive_spinner"
-            style="@style/Widget.AppCompat.ProgressBar.Small"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:indeterminate="true"
