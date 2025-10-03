@@ -20,7 +20,7 @@ public final class CashuActivityItem implements MappingModel<CashuActivityItem> 
   private final long    timestampMs;
   private final long    amountSats; // positive for incoming top-up, negative for outgoing send
   private final State   state;
-  private final RecipientId peerRecipientId; // optional, used for SENT to show avatar/name
+  private final RecipientId peerRecipientId; // optional, used for SENT/RECEIVED to show avatar/name
   private final String  peerDisplayName;     // cached name for display
 
   public CashuActivityItem(@NonNull String id, long timestampMs, long amountSats, @NonNull State state) {
@@ -50,12 +50,17 @@ public final class CashuActivityItem implements MappingModel<CashuActivityItem> 
 
   public @NonNull String getTitle(@NonNull Context context) {
     switch (state) {
-      case SENT:
+      case SENT: {
         String name = peerDisplayName != null ? peerDisplayName : context.getString(R.string.CashuActivity__unknown);
         return context.getString(R.string.CashuActivity__sent_to_s, name);
-      case RECEIVED:
+      }
+      case RECEIVED: {
         String rname = peerDisplayName != null ? peerDisplayName : context.getString(R.string.CashuActivity__unknown);
         return context.getString(R.string.CashuActivity__received_from_s, rname);
+      }
+      case COMPLETED:
+        return context.getString(R.string.CashuActivity__top_up_completed);
+      case PENDING:
       default:
         return context.getString(R.string.CashuActivity__pending_top_up);
     }
@@ -68,14 +73,14 @@ public final class CashuActivityItem implements MappingModel<CashuActivityItem> 
   public @NonNull String getAmountText() {
     String base = formatSats(Math.abs(amountSats)) + " sat";
     if (state == State.SENT || amountSats < 0) return "-" + base;
-    if (state == State.COMPLETED || state == State.RECEIVED || amountSats > 0) return "+" + base;
-    return base; // pending
+    if (state == State.COMPLETED || state == State.RECEIVED) return "+" + base;
+    return base; // pending (no sign)
   }
 
   public @ColorRes int getAmountColor() {
     if (state == State.SENT || amountSats < 0) return R.color.signal_alert_primary; // red-ish
-    if (state == State.COMPLETED || state == State.RECEIVED || amountSats > 0) return R.color.core_green;
-    return R.color.signal_text_secondary;
+    if (state == State.COMPLETED || state == State.RECEIVED) return R.color.core_green;
+    return R.color.signal_text_secondary; // pending grey
   }
 
   private static String formatSats(long sats) {
