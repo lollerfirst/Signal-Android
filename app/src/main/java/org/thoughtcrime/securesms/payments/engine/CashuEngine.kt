@@ -39,7 +39,7 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
 
   private var db: WalletSqliteDatabase? = null
   private var wallet: Wallet? = null
-  private var initialized = false
+  private var currentMintUrl: String? = null
 
   private suspend fun ensureInitialized(): Unit = withContext(Dispatchers.IO) {
     val activeMint = try { SignalStore.payments.getActiveMint() } catch (_: Throwable) { DEFAULT_MINT_URL }
@@ -47,12 +47,14 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
   }
 
   private suspend fun ensureInitializedForMint(mintUrl: String) = withContext(Dispatchers.IO) {
-    if (initialized && wallet != null && (wallet as Wallet)!=null) {
-      // We can keep a single-wallet-per-mint approach: if current mint differs, reinit.
-      // To keep it simple, just reinit when mint changes.
-      // Note: CDK Wallet does not expose mint readback cleanly; we rely on our active setting.
+    if (initialized && wallet != null && currentMintUrl == mintUrl) {
+      return@withContext
     }
+    // Reinitialize when uninitialized, or when mint changed
     try {
+      wallet?.close()
+      db?.close()
+    } catch (_: Throwable) {}
       val dbPath = appContext.filesDir.resolve(DB_NAME).absolutePath
       db = WalletSqliteDatabase(dbPath)
 
@@ -72,6 +74,7 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
 
       val p2pk = keyManager.getOrCreateP2pk()
       Log.i(TAG, "Cashu wallet initialized for $mintUrl. P2PK pub=${'$'}{p2pk.pubkeyHex.take(16)}…")
+      currentMintUrl = mintUrl
       initialized = true
     } catch (e: Throwable) {
       Log.w(TAG, "Failed to init CashuEngine for $mintUrl", e)
