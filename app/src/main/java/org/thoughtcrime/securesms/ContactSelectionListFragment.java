@@ -1,4 +1,7 @@
 /*
+import androidx.navigation.Navigation;
+import org.thoughtcrime.securesms.util.navigation.SafeNavigation;
+
  * Copyright (C) 2015 Open Whisper Systems
  *
  * This program is free software: you can redistribute it and/or modify
@@ -28,6 +31,9 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import androidx.navigation.Navigation;
+import org.thoughtcrime.securesms.util.navigation.SafeNavigation;
+
 import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -121,6 +127,7 @@ public final class ContactSelectionListFragment extends LoggingFragment {
   public static final String RV_PADDING_BOTTOM  = "recycler_view_padding_bottom";
   public static final String RV_CLIP            = "recycler_view_clipping";
   public static final String INCLUDE_CHAT_TYPES = "include_chat_types";
+  public static final String INCLUDE_PAY_INVOICE = "include_pay_invoice";
 
   private ConstraintLayout                constraintLayout;
   private TextView                        emptyText;
@@ -426,11 +433,15 @@ public final class ContactSelectionListFragment extends LoggingFragment {
               public void onChatTypeClicked(@NonNull View view, @NonNull ContactSearchData.ChatTypeRow chatTypeRow, boolean isSelected) {
                 listClickListener.onItemClick(chatTypeRow.getContactSearchKey());
               }
+
+              @Override
+              public void onPayInvoiceClicked() {
+                SafeNavigation.safeNavigate(Navigation.findNavController(requireView()), org.thoughtcrime.securesms.payments.preferences.PaymentRecipientSelectionFragmentDirections.actionDirectlyToPaymentsTransfer());
+              }
             },
             (anchorView, data) -> listClickListener.onItemLongClick(anchorView, data.getContactSearchKey()),
             storyContextMenuCallbacks,
             new CallButtonClickCallbacks()
-
         ),
         new ContactSelectionListAdapter.ArbitraryRepository()
     );
@@ -955,6 +966,10 @@ public final class ContactSelectionListFragment extends LoggingFragment {
             !hideLetterHeaders(),
             newConversationCallback != null ? ContactSearchSortOrder.RECENCY : ContactSearchSortOrder.NATURAL
         ));
+
+        if (!hasQuery) {
+          builder.arbitrary(ContactSelectionListAdapter.ArbitraryRepository.ArbitraryRow.PAY_INVOICE.getCode());
+        }
       }
 
       if ((includeGroupsAfterContacts || hasQuery) && includeActiveGroups) {

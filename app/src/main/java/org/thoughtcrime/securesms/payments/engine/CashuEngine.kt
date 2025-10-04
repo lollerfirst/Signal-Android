@@ -18,6 +18,7 @@ import org.cashudevkit.Wallet
 import org.cashudevkit.WalletConfig
 import org.cashudevkit.WalletSqliteDatabase
 import org.signal.core.util.logging.Log
+import org.thoughtcrime.securesms.keyvalue.SignalStore
 
 /**
  * CashuEngine backed by CDK Kotlin.
@@ -40,8 +41,17 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
   private var wallet: Wallet? = null
   private var initialized = false
 
-  private suspend fun ensureInitialized() = withContext(Dispatchers.IO) {
-    if (initialized) return@withContext
+  private suspend fun ensureInitialized(): Unit = withContext(Dispatchers.IO) {
+    val activeMint = try { SignalStore.payments.getActiveMint() } catch (_: Throwable) { DEFAULT_MINT_URL }
+    ensureInitializedForMint(activeMint)
+  }
+
+  private suspend fun ensureInitializedForMint(mintUrl: String) = withContext(Dispatchers.IO) {
+    if (initialized && wallet != null && (wallet as Wallet)!=null) {
+      // We can keep a single-wallet-per-mint approach: if current mint differs, reinit.
+      // To keep it simple, just reinit when mint changes.
+      // Note: CDK Wallet does not expose mint readback cleanly; we rely on our active setting.
+    }
     try {
       val dbPath = appContext.filesDir.resolve(DB_NAME).absolutePath
       db = WalletSqliteDatabase(dbPath)
@@ -50,22 +60,21 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
       val config = WalletConfig(targetProofCount = 10u)
 
       wallet = Wallet(
-        mintUrl = DEFAULT_MINT_URL,
+        mintUrl = mintUrl,
         unit = CurrencyUnit.Sat,
         mnemonic = mnemonic,
         db = db!!,
         config = config
       )
 
-      // Ensure we have mint keysets/info on first run
       runCatching { wallet!!.refreshKeysets() }.onFailure { Log.w(TAG, "refreshKeysets failed during init", it) }
       runCatching { wallet!!.getMintInfo() }.onFailure { Log.w(TAG, "getMintInfo failed during init", it) }
 
       val p2pk = keyManager.getOrCreateP2pk()
-      Log.i(TAG, "Cashu wallet initialized. P2PK pub=${'$'}{p2pk.pubkeyHex.take(16)}…")
+      Log.i(TAG, "Cashu wallet initialized for $mintUrl. P2PK pub=${'$'}{p2pk.pubkeyHex.take(16)}…")
       initialized = true
     } catch (e: Throwable) {
-      Log.w(TAG, "Failed to init CashuEngine", e)
+      Log.w(TAG, "Failed to init CashuEngine for $mintUrl", e)
       throw e
     }
   }
@@ -84,15 +93,17 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
   override suspend fun createRequest(amountSats: Long?, memo: String?): String = withContext(Dispatchers.IO) {
     ensureInitialized()
     val pub = keyManager.getOrCreateP2pk().pubkeyHex
-    "cashu:request?mint=${'$'}DEFAULT_MINT_URL&pub=${'$'}pub&amount=${'$'}{amountSats ?: 0}"
+    val mint = try { SignalStore.payments.getActiveMint() } catch (_: Throwable) { DEFAULT_MINT_URL }
+    "cashu:request?mint=${'$'}mint&pub=${'$'}pub&amount=${'$'}{amountSats ?: 0}"
   }
 
   override suspend fun requestMintQuote(amountSats: Long): Result<MintQuote> = withContext(Dispatchers.IO) {
     ensureInitialized()
     runCatching {
       val cdkQuote = wallet!!.mintQuote(Amount(amountSats.toULong()), "Signal top-up") as org.cashudevkit.MintQuote
+      val activeMint = try { SignalStore.payments.getActiveMint() } catch (_: Throwable) { DEFAULT_MINT_URL }
       val quote = MintQuote(
-        mintUrl = DEFAULT_MINT_URL,
+        mintUrl = activeMint,
         amountSats = amountSats,
         feeSats = 0L,
         totalSats = amountSats,
@@ -132,17 +143,24 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
   }
 
   override suspend fun importToken(token: String): Result<ImportResult> = withContext(Dispatchers.IO) {
-    ensureInitialized()
     runCatching {
       val decoded = Token.decode(token)
-      val added = wallet!!.receive(decoded, ReceiveOptions(
-        amountSplitTarget = SplitTarget.None,
-        p2pkSigningKeys = emptyList(),
-        preimages = emptyList(),
-        metadata = emptyMap()
-      )) as Amount
-      decoded.close()
-      ImportResult(added.value.toLong())
+      try {
+        // Allow receiving from any mint; initialize wallet for that mint and add to known list
+        val tokenMint = runCatching { (decoded.mintUrl() as MintUrl).url }.getOrElse { DEFAULT_MINT_URL }
+        try { SignalStore.payments.addKnownMint(tokenMint) } catch (_: Throwable) {}
+        ensureInitializedForMint(tokenMint)
+
+        val added = wallet!!.receive(decoded, ReceiveOptions(
+          amountSplitTarget = SplitTarget.None,
+          p2pkSigningKeys = emptyList(),
+          preimages = emptyList(),
+          metadata = emptyMap()
+        )) as Amount
+        ImportResult(added.value.toLong())
+      } finally {
+        decoded.close()
+      }
     }
   }
 

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cashu mint selector -->
+    <string name="PaymentsHomeFragment__select_mint">Select mint</string>
+    <string name="PaymentsHomeFragment__add_mint">Add mint</string>
+    <string name="PaymentsHomeFragment__invalid_mint_url">Invalid mint URL</string>
+</resources>
