@@ -1,4 +1,6 @@
 package org.thoughtcrime.securesms.conversation.v2.items
+private val TAG = org.signal.core.util.logging.Log.tag(CashuTokenInlineRenderer::class.java)
+
 
 import android.content.Context
 import android.content.ContextWrapper
@@ -119,6 +121,7 @@ object CashuTokenInlineRenderer {
           spinner.visibility = View.GONE
           receiveIcon.visibility = View.VISIBLE
           receiveContainer.isEnabled = true
+          org.signal.core.util.logging.Log.e(TAG, "Cashu receive failed", e)
           Toast.makeText(ctx, e?.message ?: ctx.getString(R.string.cashu_token_receive_failed), Toast.LENGTH_LONG).show()
         }
       }
@@ -188,6 +191,7 @@ object CashuTokenInlineRenderer {
           spinner.visibility = View.GONE
           receiveIcon.visibility = View.VISIBLE
           receiveContainer.isEnabled = true
+          org.signal.core.util.logging.Log.e(TAG, "Cashu receive failed", e)
           Toast.makeText(ctx, e?.message ?: ctx.getString(R.string.cashu_token_receive_failed), Toast.LENGTH_LONG).show()
         }
       }
