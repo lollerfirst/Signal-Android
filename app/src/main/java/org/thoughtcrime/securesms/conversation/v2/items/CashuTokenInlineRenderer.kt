@@ -4,6 +4,11 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import androidx.lifecycle.ViewTreeLifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.cashudevkit.Amount
 import org.cashudevkit.Token
 import org.thoughtcrime.securesms.R
@@ -94,27 +99,31 @@ object CashuTokenInlineRenderer {
       receiveIcon.visibility = View.GONE
       spinner.visibility = View.VISIBLE
 
+      val lifecycleOwner = ViewTreeLifecycleOwner.get(parent)
       val engine = org.thoughtcrime.securesms.payments.engine.PaymentsEngineProvider.get(AppDependencies.application)
-      val result = kotlinx.coroutines.runBlocking { engine.importToken(token) }
-      result.onSuccess { r ->
-        val peer = conversationMessage.messageRecord.fromRecipient
-        val memo = "Received from|rid:" + peer.id.serialize() + "|name:" + peer.getDisplayName(ctx).replace("|", "\u2758")
-        try {
-          org.thoughtcrime.securesms.payments.engine.CashuReceiveStore(ctx).add(
-            org.thoughtcrime.securesms.payments.engine.CashuReceiveStore.Received(null, r.addedSats, System.currentTimeMillis(), memo)
-          )
-        } catch (_: Throwable) {}
-        amountView.text = ctx.getString(R.string.cashu_token_received_sats, r.addedSats)
-        spinner.postDelayed({ spinner.visibility = View.GONE }, 400)
-      }.onFailure { e ->
-        spinner.visibility = View.GONE
-        receiveIcon.visibility = View.VISIBLE
-        receiveContainer.isEnabled = true
-        MaterialAlertDialogBuilder(ctx)
-          .setTitle(R.string.cashu_token_dialog_title)
-          .setMessage(e?.message ?: ctx.getString(R.string.cashu_token_receive_failed))
-          .setPositiveButton(R.string.cashu_token_dialog_ok, null)
-          .show()
+
+      lifecycleOwner?.lifecycleScope?.launch {
+        val result = withContext(Dispatchers.IO) { engine.importToken(token) }
+        result.onSuccess { r ->
+          val peer = conversationMessage.messageRecord.fromRecipient
+          val memo = "Received from|rid:" + peer.id.serialize() + "|name:" + peer.getDisplayName(ctx).replace("|", "\u2758")
+          try {
+            org.thoughtcrime.securesms.payments.engine.CashuReceiveStore(ctx).add(
+              org.thoughtcrime.securesms.payments.engine.CashuReceiveStore.Received(null, r.addedSats, System.currentTimeMillis(), memo)
+            )
+          } catch (_: Throwable) {}
+          amountView.text = ctx.getString(R.string.cashu_token_received_sats, r.addedSats)
+          spinner.visibility = View.GONE
+        }.onFailure { e ->
+          spinner.visibility = View.GONE
+          receiveIcon.visibility = View.VISIBLE
+          receiveContainer.isEnabled = true
+          MaterialAlertDialogBuilder(ctx)
+            .setTitle(R.string.cashu_token_dialog_title)
+            .setMessage(e?.message ?: ctx.getString(R.string.cashu_token_receive_failed))
+            .setPositiveButton(R.string.cashu_token_dialog_ok, null)
+            .show()
+        }
       }
     }
 
@@ -165,27 +174,31 @@ object CashuTokenInlineRenderer {
       receiveIcon.visibility = View.GONE
       spinner.visibility = View.VISIBLE
 
+      val lifecycleOwner = ViewTreeLifecycleOwner.get(parent)
       val engine = org.thoughtcrime.securesms.payments.engine.PaymentsEngineProvider.get(AppDependencies.application)
-      val result = kotlinx.coroutines.runBlocking { engine.importToken(token) }
-      result.onSuccess { r ->
-        val peer = conversationMessage.messageRecord.fromRecipient
-        val memo = "Received from|rid:" + peer.id.serialize() + "|name:" + peer.getDisplayName(ctx).replace("|", "\u2758")
-        try {
-          org.thoughtcrime.securesms.payments.engine.CashuReceiveStore(ctx).add(
-            org.thoughtcrime.securesms.payments.engine.CashuReceiveStore.Received(null, r.addedSats, System.currentTimeMillis(), memo)
-          )
-        } catch (_: Throwable) {}
-        amountView.text = ctx.getString(R.string.cashu_token_received_sats, r.addedSats)
-        spinner.postDelayed({ spinner.visibility = View.GONE }, 400)
-      }.onFailure { e ->
-        spinner.visibility = View.GONE
-        receiveIcon.visibility = View.VISIBLE
-        receiveContainer.isEnabled = true
-        MaterialAlertDialogBuilder(ctx)
-          .setTitle(R.string.cashu_token_dialog_title)
-          .setMessage(e?.message ?: ctx.getString(R.string.cashu_token_receive_failed))
-          .setPositiveButton(R.string.cashu_token_dialog_ok, null)
-          .show()
+
+      lifecycleOwner?.lifecycleScope?.launch {
+        val result = withContext(Dispatchers.IO) { engine.importToken(token) }
+        result.onSuccess { r ->
+          val peer = conversationMessage.messageRecord.fromRecipient
+          val memo = "Received from|rid:" + peer.id.serialize() + "|name:" + peer.getDisplayName(ctx).replace("|", "\u2758")
+          try {
+            org.thoughtcrime.securesms.payments.engine.CashuReceiveStore(ctx).add(
+              org.thoughtcrime.securesms.payments.engine.CashuReceiveStore.Received(null, r.addedSats, System.currentTimeMillis(), memo)
+            )
+          } catch (_: Throwable) {}
+          amountView.text = ctx.getString(R.string.cashu_token_received_sats, r.addedSats)
+          spinner.visibility = View.GONE
+        }.onFailure { e ->
+          spinner.visibility = View.GONE
+          receiveIcon.visibility = View.VISIBLE
+          receiveContainer.isEnabled = true
+          MaterialAlertDialogBuilder(ctx)
+            .setTitle(R.string.cashu_token_dialog_title)
+            .setMessage(e?.message ?: ctx.getString(R.string.cashu_token_receive_failed))
+            .setPositiveButton(R.string.cashu_token_dialog_ok, null)
+            .show()
+        }
       }
     }
 
