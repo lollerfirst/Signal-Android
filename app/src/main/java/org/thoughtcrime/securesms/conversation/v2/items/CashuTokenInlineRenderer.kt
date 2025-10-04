@@ -1,12 +1,14 @@
 package org.thoughtcrime.securesms.conversation.v2.items
 
+import android.content.Context
+import android.content.ContextWrapper
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import androidx.lifecycle.ViewTreeLifecycleOwner
-import androidx.lifecycle.lifecycleScope
+import android.widget.Toast
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.cashudevkit.Amount
@@ -14,6 +16,7 @@ import org.cashudevkit.Token
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.conversation.ConversationMessage
 import org.thoughtcrime.securesms.dependencies.AppDependencies
+import androidx.fragment.app.FragmentActivity
 
 /**
  * Lightweight helper to detect cashu tokens in a text-only bubble and attach a small
@@ -99,10 +102,8 @@ object CashuTokenInlineRenderer {
       receiveIcon.visibility = View.GONE
       spinner.visibility = View.VISIBLE
 
-      val lifecycleOwner = ViewTreeLifecycleOwner.get(parent)
       val engine = org.thoughtcrime.securesms.payments.engine.PaymentsEngineProvider.get(AppDependencies.application)
-
-      lifecycleOwner?.lifecycleScope?.launch {
+      CoroutineScope(Dispatchers.Main).launch {
         val result = withContext(Dispatchers.IO) { engine.importToken(token) }
         result.onSuccess { r ->
           val peer = conversationMessage.messageRecord.fromRecipient
@@ -118,11 +119,7 @@ object CashuTokenInlineRenderer {
           spinner.visibility = View.GONE
           receiveIcon.visibility = View.VISIBLE
           receiveContainer.isEnabled = true
-          MaterialAlertDialogBuilder(ctx)
-            .setTitle(R.string.cashu_token_dialog_title)
-            .setMessage(e?.message ?: ctx.getString(R.string.cashu_token_receive_failed))
-            .setPositiveButton(R.string.cashu_token_dialog_ok, null)
-            .show()
+          Toast.makeText(ctx, e?.message ?: ctx.getString(R.string.cashu_token_receive_failed), Toast.LENGTH_LONG).show()
         }
       }
     }
@@ -174,10 +171,8 @@ object CashuTokenInlineRenderer {
       receiveIcon.visibility = View.GONE
       spinner.visibility = View.VISIBLE
 
-      val lifecycleOwner = ViewTreeLifecycleOwner.get(parent)
       val engine = org.thoughtcrime.securesms.payments.engine.PaymentsEngineProvider.get(AppDependencies.application)
-
-      lifecycleOwner?.lifecycleScope?.launch {
+      CoroutineScope(Dispatchers.Main).launch {
         val result = withContext(Dispatchers.IO) { engine.importToken(token) }
         result.onSuccess { r ->
           val peer = conversationMessage.messageRecord.fromRecipient
@@ -193,11 +188,7 @@ object CashuTokenInlineRenderer {
           spinner.visibility = View.GONE
           receiveIcon.visibility = View.VISIBLE
           receiveContainer.isEnabled = true
-          MaterialAlertDialogBuilder(ctx)
-            .setTitle(R.string.cashu_token_dialog_title)
-            .setMessage(e?.message ?: ctx.getString(R.string.cashu_token_receive_failed))
-            .setPositiveButton(R.string.cashu_token_dialog_ok, null)
-            .show()
+          Toast.makeText(ctx, e?.message ?: ctx.getString(R.string.cashu_token_receive_failed), Toast.LENGTH_LONG).show()
         }
       }
     }
