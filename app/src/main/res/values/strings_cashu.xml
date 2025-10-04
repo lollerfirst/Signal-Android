@@ -4,4 +4,13 @@
     <string name="PaymentsHomeFragment__select_mint">Select mint</string>
     <string name="PaymentsHomeFragment__add_mint">Add mint</string>
     <string name="PaymentsHomeFragment__invalid_mint_url">Invalid mint URL</string>
+
+    <!-- Cashu tokens -->
+    <string name="cashu_token_label">Cashu token</string>
+    <string name="cashu_token_receive">Receive</string>
+    <string name="cashu_token_received_sats">Received %1$d sat</string>
+    <string name="cashu_token_receive_failed">Receive failed</string>
+    <string name="cashu_token_invalid">Invalid token</string>
+    <string name="cashu_token_dialog_title">Cashu</string>
+    <string name="cashu_token_dialog_ok">OK</string>
 </resources>

@@ -3,6 +3,7 @@ package org.thoughtcrime.securesms.conversation.v2.items
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import org.cashudevkit.Amount
 import org.cashudevkit.Token
 import org.thoughtcrime.securesms.R
@@ -64,9 +65,10 @@ object CashuTokenInlineRenderer {
     binding.body.visibility = View.GONE
 
     val ctx = parent.context
-    val bar = View.inflate(ctx, R.layout.cashu_token_receive_bar, null)
+    val bar = View.inflate(ctx, R.layout.cashu_token_card, null)
     bar.id = R.id.cashu_token_receive_bar
-    val label = bar.findViewById<TextView>(R.id.cashu_token_label)
+    val amountView = bar.findViewById<TextView>(R.id.cashu_token_amount)
+    val subtitleView = bar.findViewById<TextView>(R.id.cashu_token_subtitle)
     val receiveContainer = bar.findViewById<View>(R.id.cashu_token_receive_container)
     val receiveIcon = bar.findViewById<android.widget.ImageView>(R.id.cashu_token_receive_icon)
     val spinner = bar.findViewById<android.widget.ProgressBar>(R.id.cashu_token_receive_spinner)
@@ -80,9 +82,11 @@ object CashuTokenInlineRenderer {
     } catch (_: Throwable) { 0L }
 
     if (sats > 0L) {
-      label.text = formatSats(sats) + " sat"
+      amountView.text = formatSats(sats) + " sat"
+      subtitleView.text = ctx.getString(R.string.cashu_token_label)
     } else {
-      label.text = ctx.getString(R.string.cashu_token_label)
+      amountView.text = ctx.getString(R.string.cashu_token_label)
+      subtitleView.text = ""
     }
 
     receiveContainer.setOnClickListener {
@@ -100,13 +104,17 @@ object CashuTokenInlineRenderer {
             org.thoughtcrime.securesms.payments.engine.CashuReceiveStore.Received(null, r.addedSats, System.currentTimeMillis(), memo)
           )
         } catch (_: Throwable) {}
-        label.text = ctx.getString(R.string.cashu_token_received_sats, r.addedSats)
+        amountView.text = ctx.getString(R.string.cashu_token_received_sats, r.addedSats)
         spinner.postDelayed({ spinner.visibility = View.GONE }, 400)
-      }.onFailure {
-        label.text = ctx.getString(R.string.cashu_token_receive_failed)
+      }.onFailure { e ->
         spinner.visibility = View.GONE
         receiveIcon.visibility = View.VISIBLE
         receiveContainer.isEnabled = true
+        MaterialAlertDialogBuilder(ctx)
+          .setTitle(R.string.cashu_token_dialog_title)
+          .setMessage(e?.message ?: ctx.getString(R.string.cashu_token_receive_failed))
+          .setPositiveButton(R.string.cashu_token_dialog_ok, null)
+          .show()
       }
     }
 
@@ -128,9 +136,10 @@ object CashuTokenInlineRenderer {
     body.visibility = View.GONE
 
     val ctx = parent.context
-    val bar = View.inflate(ctx, R.layout.cashu_token_receive_bar, null)
+    val bar = View.inflate(ctx, R.layout.cashu_token_card, null)
     bar.id = R.id.cashu_token_receive_bar
-    val label = bar.findViewById<TextView>(R.id.cashu_token_label)
+    val amountView = bar.findViewById<TextView>(R.id.cashu_token_amount)
+    val subtitleView = bar.findViewById<TextView>(R.id.cashu_token_subtitle)
     val receiveContainer = bar.findViewById<View>(R.id.cashu_token_receive_container)
     val receiveIcon = bar.findViewById<android.widget.ImageView>(R.id.cashu_token_receive_icon)
     val spinner = bar.findViewById<android.widget.ProgressBar>(R.id.cashu_token_receive_spinner)
@@ -144,9 +153,11 @@ object CashuTokenInlineRenderer {
     } catch (_: Throwable) { 0L }
 
     if (sats > 0L) {
-      label.text = formatSats(sats) + " sat"
+      amountView.text = formatSats(sats) + " sat"
+      subtitleView.text = ctx.getString(R.string.cashu_token_label)
     } else {
-      label.text = ctx.getString(R.string.cashu_token_label)
+      amountView.text = ctx.getString(R.string.cashu_token_label)
+      subtitleView.text = ""
     }
 
     receiveContainer.setOnClickListener {
@@ -164,13 +175,17 @@ object CashuTokenInlineRenderer {
             org.thoughtcrime.securesms.payments.engine.CashuReceiveStore.Received(null, r.addedSats, System.currentTimeMillis(), memo)
           )
         } catch (_: Throwable) {}
-        label.text = ctx.getString(R.string.cashu_token_received_sats, r.addedSats)
+        amountView.text = ctx.getString(R.string.cashu_token_received_sats, r.addedSats)
         spinner.postDelayed({ spinner.visibility = View.GONE }, 400)
-      }.onFailure {
-        label.text = ctx.getString(R.string.cashu_token_receive_failed)
+      }.onFailure { e ->
         spinner.visibility = View.GONE
         receiveIcon.visibility = View.VISIBLE
         receiveContainer.isEnabled = true
+        MaterialAlertDialogBuilder(ctx)
+          .setTitle(R.string.cashu_token_dialog_title)
+          .setMessage(e?.message ?: ctx.getString(R.string.cashu_token_receive_failed))
+          .setPositiveButton(R.string.cashu_token_dialog_ok, null)
+          .show()
       }
     }
 
