@@ -143,11 +143,35 @@ object CashuTokenInlineRenderer {
         }
       }
     }
-
-    val params = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-    parent.addView(bar, params)
+    // Insert card where the text would be, with similar layout params so the footer (timestamp) stays below
+    val index = parent.indexOfChild(binding.body)
+    val baseLp = binding.body.layoutParams
+    val newLp: android.view.ViewGroup.LayoutParams = when (baseLp) {
+      is androidx.constraintlayout.widget.ConstraintLayout.LayoutParams ->
+        androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+          leftToLeft = baseLp.leftToLeft
+          rightToRight = baseLp.rightToRight
+          topToTop = baseLp.topToTop
+          bottomToBottom = baseLp.bottomToBottom
+          setMargins(baseLp.leftMargin, baseLp.topMargin, baseLp.rightMargin, baseLp.bottomMargin)
+        }
+      is android.widget.LinearLayout.LayoutParams ->
+        android.widget.LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+          setMargins(baseLp.leftMargin, baseLp.topMargin, baseLp.rightMargin, baseLp.bottomMargin)
+          gravity = baseLp.gravity
+        }
+      is android.view.ViewGroup.MarginLayoutParams ->
+        android.view.ViewGroup.MarginLayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+          setMargins(baseLp.leftMargin, baseLp.topMargin, baseLp.rightMargin, baseLp.bottomMargin)
+        }
+      else -> android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
+    }
+    // Ensure the bar replaces the body at the same position so footer remains below
+    val insertAt = if (index >= 0) index else parent.childCount
+    parent.addView(bar, insertAt, newLp)
+    val insertAt = if (index >= 0) index else parent.childCount
+    parent.addView(bar, insertAt, newLp)
     return true
-  }
 
   @JvmStatic
   fun maybeAttachReceiveUiClassic(parent: android.view.ViewGroup, body: TextView, conversationMessage: org.thoughtcrime.securesms.conversation.ConversationMessage): Boolean {
@@ -195,10 +219,31 @@ object CashuTokenInlineRenderer {
       val engine = org.thoughtcrime.securesms.payments.engine.PaymentsEngineProvider.get(AppDependencies.application)
       CoroutineScope(Dispatchers.Main).launch {
         val result = withContext(Dispatchers.IO) { engine.importToken(token) }
-        result.onSuccess { r ->
-          val peer = conversationMessage.messageRecord.fromRecipient
-          val memo = "Received from|rid:" + peer.id.serialize() + "|name:" + peer.getDisplayName(ctx).replace("|", "\u2758")
-          try {
+    // Insert card where the text would be, with similar layout params so the footer (timestamp) stays below
+    val index = parent.indexOfChild(body)
+    val baseLp = body.layoutParams
+    val newLp: android.view.ViewGroup.LayoutParams = when (baseLp) {
+      is androidx.constraintlayout.widget.ConstraintLayout.LayoutParams ->
+        androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+          leftToLeft = baseLp.leftToLeft
+          rightToRight = baseLp.rightToRight
+          topToTop = baseLp.topToTop
+          bottomToBottom = baseLp.bottomToBottom
+          setMargins(baseLp.leftMargin, baseLp.topMargin, baseLp.rightMargin, baseLp.bottomMargin)
+        }
+      is android.widget.LinearLayout.LayoutParams ->
+        android.widget.LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+          setMargins(baseLp.leftMargin, baseLp.topMargin, baseLp.rightMargin, baseLp.bottomMargin)
+          gravity = baseLp.gravity
+        }
+      is android.view.ViewGroup.MarginLayoutParams ->
+        android.view.ViewGroup.MarginLayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+          setMargins(baseLp.leftMargin, baseLp.topMargin, baseLp.rightMargin, baseLp.bottomMargin)
+        }
+      else -> android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
+    }
+    parent.addView(bar, if (index >= 0) index else -1, newLp)
+    return true
             org.thoughtcrime.securesms.payments.engine.CashuReceiveStore(ctx).add(
               org.thoughtcrime.securesms.payments.engine.CashuReceiveStore.Received(null, r.addedSats, System.currentTimeMillis(), memo)
             )
