@@ -33,6 +33,9 @@ public class PayInvoiceConfirmFragment extends Fragment {
   private static final String ARG_EXPIRES_MS  = "expiresMs";
   private static final String ARG_ID          = "id";
 
+  private Button confirm;
+  private ProgressBar spinner;
+
   public PayInvoiceConfirmFragment() {
     super(R.layout.pay_invoice_confirm_fragment);
   }
@@ -59,8 +62,8 @@ public class PayInvoiceConfirmFragment extends Fragment {
     TextView fee    = view.findViewById(R.id.pay_invoice_fee);
     TextView total  = view.findViewById(R.id.pay_invoice_total);
     TextView expiry = view.findViewById(R.id.pay_invoice_expiry);
-    Button   confirm= view.findViewById(R.id.pay_invoice_confirm);
-    ProgressBar spinner = view.findViewById(R.id.pay_invoice_spinner);
+    confirm = view.findViewById(R.id.pay_invoice_confirm);
+    spinner = view.findViewById(R.id.pay_invoice_spinner);
 
     Bundle args = getArguments();
     long amt = args != null ? args.getLong(ARG_AMOUNT_SATS, 0L) : 0L;
@@ -99,13 +102,22 @@ public class PayInvoiceConfirmFragment extends Fragment {
         MeltQuote quote = new MeltQuote(amountSats, feeSats, amountSats + feeSats, expiresAt, invoice, id);
         boolean ok = CashuUiInteractor.meltBlocking(AppDependencies.getApplication(), quote);
         requireView().post(() -> {
-          Toast.makeText(requireContext(), R.string.PaymentsPayInvoice__invoice_paid, Toast.LENGTH_SHORT).show();
-          Navigation.findNavController(v).popBackStack();
+          spinner.setVisibility(View.GONE);
+          confirm.setEnabled(true);
+          if (ok) {
+            Toast.makeText(requireContext(), R.string.PaymentsPayInvoice__invoice_paid, Toast.LENGTH_SHORT).show();
+            Navigation.findNavController(v).popBackStack();
+          } else {
+            Log.w(TAG, "Melt failed: engine returned !ok");
+            Toast.makeText(requireContext(), R.string.PaymentsPayInvoice__unable_to_pay, Toast.LENGTH_LONG).show();
+          }
         });
       } catch (Throwable t) {
+        Log.w(TAG, "Melt failed", t);
         requireView().post(() -> {
+          spinner.setVisibility(View.GONE);
+          confirm.setEnabled(true);
           Toast.makeText(requireContext(), R.string.PaymentsPayInvoice__unable_to_pay, Toast.LENGTH_LONG).show();
-          Navigation.findNavController(v).popBackStack();
         });
       }
     }).start();

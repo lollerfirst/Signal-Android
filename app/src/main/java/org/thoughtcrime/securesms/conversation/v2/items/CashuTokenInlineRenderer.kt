@@ -1,6 +1,4 @@
 package org.thoughtcrime.securesms.conversation.v2.items
-private val TAG = org.signal.core.util.logging.Log.tag(CashuTokenInlineRenderer::class.java)
-
 
 import android.content.Context
 import android.content.ContextWrapper
@@ -18,13 +16,13 @@ import org.cashudevkit.Token
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.conversation.ConversationMessage
 import org.thoughtcrime.securesms.dependencies.AppDependencies
-import androidx.fragment.app.FragmentActivity
 
 /**
  * Lightweight helper to detect cashu tokens in a text-only bubble and attach a small
  * receive UI. This avoids large refactors in the binding pipeline.
  */
 object CashuTokenInlineRenderer {
+  private val TAG = "CashuToken"
   private fun extractTokenFromAny(text: String?): String? {
     if (text.isNullOrEmpty()) return null
     val idx = text.indexOf("cashu", ignoreCase = true)
