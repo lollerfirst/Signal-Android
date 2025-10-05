@@ -108,10 +108,11 @@ public class CreatePaymentViewModel extends ViewModel {
   @NonNull LiveData<CharSequence> getNote() { return Transformations.distinctUntilChanged(note); }
   @NonNull LiveData<Boolean> isValidAmount() {
     if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
-      return androidx.lifecycle.Transformations.map(inputState.getStateLiveData(), s -> {
+      androidx.lifecycle.LiveData<java.lang.Long> satsBalance = org.thoughtcrime.securesms.util.livedata.LiveDataUtil.mapAsync(new DefaultValueLiveData<>(true), x -> new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(AppDependencies.getApplication()).getSpendableSatsBlocking());
+      return org.thoughtcrime.securesms.util.livedata.LiveDataUtil.combineLatest(satsBalance, inputState.getStateLiveData(), (balSats, s) -> {
         try {
           long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(s.getMoneyAmount());
-          return sats > 0L;
+          return sats > 0L && sats <= balSats;
         } catch (Throwable t) { return false; }
       });
     }

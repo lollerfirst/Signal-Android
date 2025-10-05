@@ -105,6 +105,7 @@ public class PaymentsHomeFragment extends LoggingFragment {
     MoneyView           balance          = view.findViewById(R.id.payments_home_fragment_header_balance);
     TextView            exchange         = view.findViewById(R.id.payments_home_fragment_header_exchange);
     View                addMoney         = view.findViewById(R.id.button_start_frame);
+    View                withdraw         = view.findViewById(R.id.button_center_frame);
     View                sendMoney        = view.findViewById(R.id.button_end_frame);
     View                refresh          = view.findViewById(R.id.payments_home_fragment_header_refresh);
     LottieAnimationView refreshAnimation = view.findViewById(R.id.payments_home_fragment_header_refresh_animation);
@@ -126,6 +127,18 @@ public class PaymentsHomeFragment extends LoggingFragment {
         showPaymentsDisabledDialog();
       }
     });
+
+    // Withdraw (Lightning invoice / melt)
+    withdraw.setOnClickListener(v -> {
+      if (viewModel.isEnclaveFailurePresent()) {
+        showUpdateIsRequiredDialog();
+      } else if (SignalStore.payments().getPaymentsAvailability().isSendAllowed()) {
+        SafeNavigation.safeNavigate(NavHostFragment.findNavController(this), R.id.action_paymentsHome_to_paymentsTransfer);
+      } else {
+        showPaymentsDisabledDialog();
+      }
+    });
+
     sendMoney.setOnClickListener(v -> {
       if (viewModel.isEnclaveFailurePresent()) {
         showUpdateIsRequiredDialog();

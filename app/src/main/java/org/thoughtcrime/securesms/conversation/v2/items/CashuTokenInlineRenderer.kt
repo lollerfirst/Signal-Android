@@ -13,9 +13,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.cashudevkit.Amount
 import org.cashudevkit.Token
+import org.signal.core.util.StreamUtil
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.conversation.ConversationMessage
 import org.thoughtcrime.securesms.dependencies.AppDependencies
+import org.thoughtcrime.securesms.mms.PartAuthority
+import org.thoughtcrime.securesms.util.hasTextSlide
+import org.thoughtcrime.securesms.util.requireTextSlide
 
 /**
  * Lightweight helper to detect cashu tokens in a text-only bubble and attach a small
@@ -42,6 +46,20 @@ object CashuTokenInlineRenderer {
     ) candidate else null
   }
 
+  private fun extractTokenFromTextSlideIfPresent(ctx: Context, conversationMessage: ConversationMessage): String? {
+    return try {
+      val record = conversationMessage.messageRecord
+      if (!record.isMms || !record.hasTextSlide()) return null
+      val textSlideUri = record.requireTextSlide().uri ?: return null
+      PartAuthority.getAttachmentStream(ctx, textSlideUri).use { input ->
+        val fullText = StreamUtil.readFullyAsString(input)
+        extractTokenFromAny(fullText)
+      }
+    } catch (t: Throwable) {
+      null
+    }
+  }
+
   fun resetIfPresent(binding: V2ConversationItemTextOnlyBindingBridge) {
     val parent = binding.bodyWrapper
     parent.findViewById<View>(R.id.cashu_token_receive_bar)?.let { parent.removeView(it) }
@@ -59,7 +77,9 @@ object CashuTokenInlineRenderer {
     val visibleToken = extractTokenFromAny(binding.body.text?.toString())
     val fullBody = conversationMessage.messageRecord.body
     val fullToken = extractTokenFromAny(fullBody)
-    val token = fullToken ?: visibleToken ?: return false
+    val ctx = binding.bodyWrapper.context
+    val attachmentToken = if (fullToken == null && visibleToken == null) extractTokenFromTextSlideIfPresent(ctx, conversationMessage) else null
+    val token = fullToken ?: visibleToken ?: attachmentToken ?: return false
 
     val parent = binding.bodyWrapper
     val existing = parent.findViewById<View>(R.id.cashu_token_receive_bar)
@@ -72,7 +92,6 @@ object CashuTokenInlineRenderer {
     binding.body.text = ""
     binding.body.visibility = View.GONE
 
-    val ctx = parent.context
     val bar = View.inflate(ctx, R.layout.cashu_token_card, null)
     bar.id = R.id.cashu_token_receive_bar
     val amountView = bar.findViewById<TextView>(R.id.cashu_token_amount)
@@ -91,7 +110,7 @@ object CashuTokenInlineRenderer {
 
     if (sats > 0L) {
       amountView.text = formatSats(sats) + " sat"
-      subtitleView.text = ctx.getString(R.string.cashu_token_label)
+      subtitleView.text = ""
     } else {
       amountView.text = ctx.getString(R.string.cashu_token_label)
       subtitleView.text = ""
@@ -137,12 +156,13 @@ object CashuTokenInlineRenderer {
 
     val visibleToken = extractTokenFromAny(body.text?.toString())
     val fullToken = extractTokenFromAny(conversationMessage.messageRecord.body)
-    val token = fullToken ?: visibleToken ?: return false
+    val ctx = parent.context
+    val attachmentToken = if (fullToken == null && visibleToken == null) extractTokenFromTextSlideIfPresent(ctx, conversationMessage) else null
+    val token = fullToken ?: visibleToken ?: attachmentToken ?: return false
 
     body.text = ""
     body.visibility = View.GONE
 
-    val ctx = parent.context
     val bar = View.inflate(ctx, R.layout.cashu_token_card, null)
     bar.id = R.id.cashu_token_receive_bar
     val amountView = bar.findViewById<TextView>(R.id.cashu_token_amount)
@@ -161,7 +181,7 @@ object CashuTokenInlineRenderer {
 
     if (sats > 0L) {
       amountView.text = formatSats(sats) + " sat"
-      subtitleView.text = ctx.getString(R.string.cashu_token_label)
+      subtitleView.text = ""
     } else {
       amountView.text = ctx.getString(R.string.cashu_token_label)
       subtitleView.text = ""

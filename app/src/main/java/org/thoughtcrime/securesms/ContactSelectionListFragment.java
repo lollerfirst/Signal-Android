@@ -968,7 +968,6 @@ public final class ContactSelectionListFragment extends LoggingFragment {
         ));
 
         if (!hasQuery) {
-          builder.arbitrary(ContactSelectionListAdapter.ArbitraryRepository.ArbitraryRow.PAY_INVOICE.getCode());
         }
       }
 

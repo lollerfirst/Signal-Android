@@ -17,7 +17,6 @@
         android:paddingEnd="15dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/middle"
-        app:layout_constraintHorizontal_bias="1"
         app:layout_constraintHorizontal_chainStyle="packed"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -41,9 +40,57 @@
         android:layout_height="0dp"
         android:background="@drawable/circled_rectangle_outline_middle"
         app:layout_constraintBottom_toBottomOf="@id/button_start_frame"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/button_center_frame"
+        app:layout_constraintStart_toEndOf="@id/button_start_frame"
         app:layout_constraintTop_toTopOf="@id/button_start_frame">
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:background="@color/signal_divider_major" />
+
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/button_center_frame"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/circled_rectangle_outline_middle"
+        android:minHeight="48dp"
+        android:paddingStart="15dp"
+        android:paddingEnd="15dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/middle_right"
+        app:layout_constraintStart_toEndOf="@id/middle"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/button_center"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:drawablePadding="8dp"
+            android:gravity="center_vertical"
+            android:maxWidth="132dp"
+            android:text="@string/PaymentsHomeFragment__pay_invoice"
+            android:textAppearance="@style/TextAppearance.Signal.Body2.Bold"
+            android:textColor="@color/signal_text_secondary"
+            app:drawableStartCompat="@drawable/ic_money_minus_20"
+            app:drawableTint="@color/signal_accent_primary" />
+
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/middle_right"
+        android:layout_width="3dp"
+        android:layout_height="0dp"
+        android:background="@drawable/circled_rectangle_outline_middle"
+        app:layout_constraintBottom_toBottomOf="@id/button_center_frame"
+        app:layout_constraintEnd_toStartOf="@id/button_end_frame"
+        app:layout_constraintStart_toEndOf="@id/button_center_frame"
+        app:layout_constraintTop_toTopOf="@id/button_center_frame">
 
         <View
             android:layout_width="1dp"
@@ -64,8 +111,7 @@
         android:paddingEnd="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0"
-        app:layout_constraintStart_toEndOf="@id/middle"
+        app:layout_constraintStart_toEndOf="@id/middle_right"
         app:layout_constraintTop_toTopOf="parent">
 
         <androidx.appcompat.widget.AppCompatTextView

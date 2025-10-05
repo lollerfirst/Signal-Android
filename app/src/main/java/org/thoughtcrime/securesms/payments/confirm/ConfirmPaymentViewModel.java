@@ -46,11 +46,13 @@ final class ConfirmPaymentViewModel extends ViewModel {
     this.errorEvents              = new SingleLiveEvent<>();
     this.feeRetry                 = new DefaultValueLiveData<>(true);
 
-    this.store.update(SignalStore.payments().liveMobileCoinBalance(), (balance, state) -> state.updateBalance(balance.getFullAmount()));
 
     LiveData<Money> amount = Transformations.distinctUntilChanged(Transformations.map(store.getStateLiveData(), ConfirmPaymentState::getAmount));
 
     boolean cashu = SignalStore.payments().cashuEnabled();
+    if (!cashu) {
+      this.store.update(SignalStore.payments().liveMobileCoinBalance(), (balance, state) -> state.updateBalanceText(balance.getFullAmount().toString(org.whispersystems.signalservice.api.payments.FormatterOptions.defaults())));
+    }
 
     if (!cashu) {
       LiveData<Boolean> longLoadTime = LiveDataUtil.delay(1000, true);

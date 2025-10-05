@@ -7,10 +7,15 @@ import androidx.annotation.NonNull;
 import org.signal.core.util.logging.Log;
 import org.thoughtcrime.securesms.database.SignalDatabase;
 
+import org.thoughtcrime.securesms.mms.OutgoingMessage;
+import org.thoughtcrime.securesms.mms.SlideDeck;
+import org.thoughtcrime.securesms.util.MessageUtil;
 import org.thoughtcrime.securesms.payments.preferences.cashu.CashuSendHelper;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientId;
 import org.whispersystems.signalservice.api.payments.Money;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * Cashu-specific confirmation path that mimics the MobileCoin confirmation UI.
@@ -66,15 +71,29 @@ final class ConfirmCashuRepository {
       Recipient recipient = Recipient.resolved(recipientId);
       long threadId = SignalDatabase.threads().getOrCreateThreadIdFor(recipient);
 
+      // Ensure we respect message size limits by using long-text attachment when needed
+      MessageUtil.SplitResult split = MessageUtil.getSplitMessage(appContext, token);
+      SlideDeck deck = new SlideDeck();
+      split.getTextSlide().ifPresent(deck::addSlide);
+      OutgoingMessage outgoing = new OutgoingMessage(
+          recipient,
+          deck,
+          split.getBody(),
+          System.currentTimeMillis(),
+          TimeUnit.SECONDS.toMillis(recipient.getExpiresInSeconds()),
+          recipient.getExpireTimerVersion(),
+          false,
+          org.thoughtcrime.securesms.database.model.StoryType.NONE,
+          java.util.Collections.emptyList(),
+          java.util.Collections.emptyList(),
+          true,
+          null,
+          java.util.Collections.emptyList()
+      );
+
       org.thoughtcrime.securesms.sms.MessageSender.send(
           appContext,
-          org.thoughtcrime.securesms.mms.OutgoingMessage.text(
-              recipient,
-              token,
-              java.util.concurrent.TimeUnit.SECONDS.toMillis(recipient.getExpiresInSeconds()),
-              System.currentTimeMillis(),
-              null
-          ),
+          outgoing,
           threadId,
           org.thoughtcrime.securesms.sms.MessageSender.SendType.SIGNAL,
           null,
