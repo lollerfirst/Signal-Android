@@ -89,6 +89,7 @@ object CashuTokenInlineRenderer {
       return true
     }
 
+    // Ensure the body text is replaced with the card and footer is measured under it
     binding.body.text = ""
     binding.body.visibility = View.GONE
 
@@ -100,9 +101,10 @@ object CashuTokenInlineRenderer {
     val receiveIcon = bar.findViewById<android.widget.ImageView>(R.id.cashu_token_receive_icon)
     val spinner = bar.findViewById<android.widget.ProgressBar>(R.id.cashu_token_receive_spinner)
 
-    // Make sure the line never wraps inside the card; bubble will widen instead
     amountView.isSingleLine = true
+    amountView.ellipsize = android.text.TextUtils.TruncateAt.END
     subtitleView.isSingleLine = true
+    subtitleView.ellipsize = android.text.TextUtils.TruncateAt.END
 
     val sats: Long = try {
       val decoded = Token.decode(token)

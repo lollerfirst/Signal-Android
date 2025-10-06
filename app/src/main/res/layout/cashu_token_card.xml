@@ -37,26 +37,31 @@
 
         <LinearLayout
             android:id="@+id/cashu_token_texts"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:orientation="vertical"
             android:layout_marginEnd="8dp">
 
             <TextView
                 android:id="@+id/cashu_token_amount"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textAppearance="@style/TextAppearance.Signal.Body2"
                 android:textStyle="bold"
                 android:textColor="@color/signal_text_primary"
+                android:singleLine="true"
+                android:ellipsize="end"
                 tools:text="10,000,000,000 sat" />
 
             <TextView
                 android:id="@+id/cashu_token_subtitle"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textAppearance="@style/TextAppearance.Signal.Caption"
                 android:textColor="@color/signal_text_secondary"
+                android:singleLine="true"
+                android:ellipsize="end"
                 tools:text="Cashu token" />
         </LinearLayout>
 
@@ -65,8 +70,7 @@
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:minWidth="36dp"
-            android:minHeight="36dp"
-            android:layout_marginStart="8dp">
+            android:minHeight="36dp">
 
             <ImageView
                 android:id="@+id/cashu_token_receive_icon"
