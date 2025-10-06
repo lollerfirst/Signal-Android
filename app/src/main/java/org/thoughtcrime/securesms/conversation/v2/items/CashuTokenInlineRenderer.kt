@@ -100,6 +100,10 @@ object CashuTokenInlineRenderer {
     val receiveIcon = bar.findViewById<android.widget.ImageView>(R.id.cashu_token_receive_icon)
     val spinner = bar.findViewById<android.widget.ProgressBar>(R.id.cashu_token_receive_spinner)
 
+    // Make sure the line never wraps inside the card; bubble will widen instead
+    amountView.isSingleLine = true
+    subtitleView.isSingleLine = true
+
     val sats: Long = try {
       val decoded = Token.decode(token)
       val amt = decoded.value() as Amount
@@ -118,6 +122,10 @@ object CashuTokenInlineRenderer {
 
     receiveContainer.setOnClickListener {
       receiveContainer.isEnabled = false
+    // Prevent text wrapping that would cause layout overlap with footer
+    amountView.isSingleLine = true
+    subtitleView.isSingleLine = true
+
       receiveIcon.visibility = View.GONE
       spinner.visibility = View.VISIBLE
 
@@ -143,9 +151,13 @@ object CashuTokenInlineRenderer {
         }
       }
     }
-    // Insert card where the text would be, with similar layout params so the footer (timestamp) stays below
+    // Insert card where the text would be, with layout params that mirror the text and let the bubble grow.
     val index = parent.indexOfChild(binding.body)
     val baseLp = binding.body.layoutParams
+
+    // Important: ensure the outer bubble measures width based on new content
+    (bar.findViewById<View>(R.id.cashu_token_amount) as TextView).isSingleLine = true
+
     val newLp: android.view.ViewGroup.LayoutParams = when (baseLp) {
       is androidx.constraintlayout.widget.ConstraintLayout.LayoutParams ->
         androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT).apply {
@@ -166,7 +178,6 @@ object CashuTokenInlineRenderer {
         }
       else -> android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
     }
-    // Ensure the bar replaces the body at the same position so footer remains below
     val insertAt = if (index >= 0) index else parent.childCount
     parent.addView(bar, insertAt, newLp)
     return true
