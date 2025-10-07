@@ -33,6 +33,8 @@ class PaymentsValues internal constructor(store: KeyValueStore) : SignalStoreVal
     private val TAG = Log.tag(PaymentsValues::class.java)
 
     private const val MOB_PAYMENTS_ENABLED = "mob_payments_enabled"
+    private const val CASHU_ACTIVE_MINT = "cashu_active_mint"
+    private const val CASHU_KNOWN_MINTS = "cashu_known_mints"
     private const val CASHU_ENABLED = "cashu_enabled"
     private const val PAYMENTS_ENTROPY = "payments_entropy"
     private const val MOB_LEDGER = "mob_ledger"
@@ -77,6 +79,8 @@ class PaymentsValues internal constructor(store: KeyValueStore) : SignalStoreVal
       PAYMENTS_ENTROPY,
       MOB_PAYMENTS_ENABLED,
       MOB_LEDGER,
+      CASHU_ACTIVE_MINT,
+      CASHU_KNOWN_MINTS,
       PAYMENTS_CURRENT_CURRENCY,
       DEFAULT_CURRENCY_CODE,
       USER_CONFIRMED_MNEMONIC,
@@ -91,6 +95,30 @@ class PaymentsValues internal constructor(store: KeyValueStore) : SignalStoreVal
       PAYMENT_LOCK_SKIP_COUNT,
       SHOW_SAVE_RECOVERY_PHRASE
     )
+  }
+
+  // Cashu multi-mint support
+  fun getActiveMint(): String {
+    return store.getString(CASHU_ACTIVE_MINT, "https://mint.chorus.community")
+  }
+
+  fun setActiveMint(url: String) {
+    store.beginWrite().putString(CASHU_ACTIVE_MINT, url).commit()
+    // Also ensure it's in known mints
+    addKnownMint(url)
+  }
+
+  fun getKnownMints(): List<String> {
+    val raw = store.getString(CASHU_KNOWN_MINTS, "") ?: ""
+    if (raw.isBlank()) return listOf(getActiveMint())
+    return raw.split('|').filter { it.isNotBlank() }
+  }
+
+  fun addKnownMint(url: String) {
+    val current = getKnownMints().toMutableSet()
+    if (current.add(url)) {
+      store.beginWrite().putString(CASHU_KNOWN_MINTS, current.joinToString("|")) .commit()
+    }
   }
 
   fun confirmMnemonic(confirmed: Boolean) {

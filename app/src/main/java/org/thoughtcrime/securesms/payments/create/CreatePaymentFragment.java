@@ -24,7 +24,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import org.thoughtcrime.securesms.LoggingFragment;
 import org.thoughtcrime.securesms.R;
 import org.thoughtcrime.securesms.components.emoji.EmojiTextView;
-import org.thoughtcrime.securesms.payments.FiatMoneyUtil;
 import org.thoughtcrime.securesms.payments.MoneyView;
 import org.thoughtcrime.securesms.payments.preferences.RecipientHasNotEnabledPaymentsDialog;
 import org.thoughtcrime.securesms.util.CommunicationActions;
@@ -36,7 +35,6 @@ import org.whispersystems.signalservice.api.payments.FormatterOptions;
 import org.whispersystems.signalservice.api.payments.Money;
 
 import java.text.DecimalFormatSymbols;
-import java.util.Currency;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -72,6 +70,10 @@ public class CreatePaymentFragment extends LoggingFragment {
 
   private ConstraintSet cryptoConstraintSet;
   private ConstraintSet fiatConstraintSet;
+
+  // Local UI state for Cashu: which label is primary
+  private boolean cashuFiatPrimary = false;
+  private InputState lastInputState = null;
 
   public CreatePaymentFragment() {
     super(R.layout.create_payment_fragment);
@@ -122,32 +124,34 @@ public class CreatePaymentFragment extends LoggingFragment {
     pay.setOnClickListener(v -> {
       if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
         // In Cashu mode, we defer token creation and sending to the confirmation dialog.
-        // Just navigate to the confirmation bottom sheet UI for a consistent UX.
       }
       NavDirections directions = CreatePaymentFragmentDirections.actionCreatePaymentFragmentToConfirmPaymentFragment(viewModel.getCreatePaymentDetails())
                                                                 .setFinishOnConfirm(arguments.getFinishOnConfirm());
       SafeNavigation.safeNavigate(Navigation.findNavController(v), directions);
     });
 
-    toggle.setOnClickListener(v -> viewModel.toggleMoneyInputTarget());
+    // Toggle swaps primary/secondary. In Cashu, we manage it locally.
+    toggle.setOnClickListener(v -> {
+      if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
+        cashuFiatPrimary = !cashuFiatPrimary;
+        if (lastInputState != null) renderCashu(lastInputState);
+      } else {
+        viewModel.toggleMoneyInputTarget();
+      }
+    });
 
     initializeConstraintSets();
     initializeKeyboardButtons(view, viewModel);
 
     viewModel.getInputState().observe(getViewLifecycleOwner(), inputState -> {
-      updateAmount(inputState);
-      // Update exchange: for Cashu, compute sats->fiat; otherwise legacy MOB
       if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
-        long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(inputState.getMoneyAmount());
-        String fiatText = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext()).satsToFiatStringBlocking(sats);
-        exchange.setVisibility(View.VISIBLE);
-        exchange.setText(fiatText);
-        toggle.setVisibility(View.GONE);
-        toggle.setEnabled(false);
+        lastInputState = inputState;
+        renderCashu(inputState);
       } else {
+        updateAmount(inputState);
         updateExchange(inputState);
+        updateMoneyInputTarget(inputState.getInputTarget());
       }
-      updateMoneyInputTarget(inputState.getInputTarget());
     });
 
     viewModel.getIsPaymentsSupportedByPayee().observe(getViewLifecycleOwner(), isSupported -> {
@@ -244,9 +248,15 @@ public class CreatePaymentFragment extends LoggingFragment {
         }
         break;
       case FIAT_MONEY:
-        amount.setMoney(inputState.getMoney(), false, inputState.getExchangeRate().get().getTimestamp());
-        amount.append(SpanUtil.buildImageSpan(spacer));
-        amount.append(SpanUtil.buildImageSpan(infoIcon));
+        if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
+          // In fiat layout, amount is the small label; it should show sats.
+          long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(inputState.getMoneyAmount());
+          amount.setText(formatSats(sats) + " sat");
+        } else {
+          amount.setMoney(inputState.getMoney(), false, inputState.getExchangeRate().get().getTimestamp());
+          amount.append(SpanUtil.buildImageSpan(spacer));
+          amount.append(SpanUtil.buildImageSpan(infoIcon));
+        }
         break;
     }
   }
@@ -259,8 +269,10 @@ public class CreatePaymentFragment extends LoggingFragment {
           String fiatText = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext()).satsToFiatStringBlocking(sats);
           exchange.setVisibility(View.VISIBLE);
           exchange.setText(fiatText);
-          toggle.setVisibility(View.GONE);
-          toggle.setEnabled(false);
+          exchange.append(org.thoughtcrime.securesms.util.SpanUtil.buildImageSpan(spacer));
+          exchange.append(org.thoughtcrime.securesms.util.SpanUtil.buildImageSpan(infoIcon));
+          toggle.setVisibility(View.VISIBLE);
+          toggle.setEnabled(true);
         } else {
           if (inputState.getFiatMoney().isPresent()) {
             exchange.setVisibility(View.VISIBLE);
@@ -277,8 +289,16 @@ public class CreatePaymentFragment extends LoggingFragment {
         }
         break;
       case FIAT_MONEY:
-        java.util.Currency currency = inputState.getFiatMoney().get().getCurrency();
-        exchange.setText(org.thoughtcrime.securesms.payments.FiatMoneyUtil.manualFormat(currency, inputState.getFiatAmount()));
+        if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
+          long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(inputState.getMoneyAmount());
+          exchange.setVisibility(View.VISIBLE);
+          exchange.setText(formatSats(sats) + " sat");
+          toggle.setVisibility(View.VISIBLE);
+          toggle.setEnabled(true);
+        } else {
+          java.util.Currency currency = inputState.getFiatMoney().get().getCurrency();
+          exchange.setText(org.thoughtcrime.securesms.payments.FiatMoneyUtil.manualFormat(currency, inputState.getFiatAmount()));
+        }
         break;
     }
   }
@@ -301,6 +321,50 @@ public class CreatePaymentFragment extends LoggingFragment {
 
     fiatConstraintSet = new ConstraintSet();
     fiatConstraintSet.clone(getContext(), R.layout.create_payment_fragment_amount_toggle);
+  }
+
+  private void renderCashu(@NonNull InputState inputState) {
+    // cashuFiatPrimary determines which label (amount/exchange) is large vs small
+    if (cashuFiatPrimary) {
+      // Primary is fiat, secondary is sats
+      fiatConstraintSet.applyTo(constraintLayout);
+      amount.setTextColor(ContextCompat.getColor(requireContext(), R.color.signal_text_secondary));
+      exchange.setTextColor(ContextCompat.getColor(requireContext(), R.color.signal_text_primary));
+
+      long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(inputState.getMoneyAmount());
+      String fiatText = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext()).satsToFiatStringBlocking(sats);
+
+      // Large label (exchange) shows fiat with info icon
+      exchange.setVisibility(View.VISIBLE);
+      exchange.setText(fiatText);
+      exchange.append(org.thoughtcrime.securesms.util.SpanUtil.buildImageSpan(spacer));
+      exchange.append(org.thoughtcrime.securesms.util.SpanUtil.buildImageSpan(infoIcon));
+
+      // Small label (amount) shows sats
+      amount.setText(formatSats(sats) + " sat");
+
+    } else {
+      // Primary is sats, secondary is fiat
+      cryptoConstraintSet.applyTo(constraintLayout);
+      exchange.setTextColor(ContextCompat.getColor(requireContext(), R.color.signal_text_secondary));
+      amount.setTextColor(ContextCompat.getColor(requireContext(), R.color.signal_text_primary));
+
+      long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(inputState.getMoneyAmount());
+      String fiatText = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext()).satsToFiatStringBlocking(sats);
+
+      // Large label (amount) shows sats
+      amount.setText(formatSats(sats) + " sat");
+
+      // Small label (exchange) shows fiat with info icon
+      exchange.setVisibility(View.VISIBLE);
+      exchange.setText(fiatText);
+      exchange.append(org.thoughtcrime.securesms.util.SpanUtil.buildImageSpan(spacer));
+      exchange.append(org.thoughtcrime.securesms.util.SpanUtil.buildImageSpan(infoIcon));
+    }
+
+    // Ensure toggle is visible/enabled
+    toggle.setVisibility(View.VISIBLE);
+    toggle.setEnabled(true);
   }
 
   private void updateMoneyInputTarget(@NonNull InputTarget target) {

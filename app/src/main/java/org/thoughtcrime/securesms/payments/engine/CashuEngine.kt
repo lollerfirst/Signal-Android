@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.cashudevkit.Amount
 import org.cashudevkit.CurrencyUnit
+import org.cashudevkit.Melted
 import org.cashudevkit.MintUrl
 import org.cashudevkit.PreparedSend
 import org.cashudevkit.ReceiveOptions
@@ -13,11 +14,11 @@ import org.cashudevkit.SendMemo
 import org.cashudevkit.SendOptions
 import org.cashudevkit.SplitTarget
 import org.cashudevkit.Token
-import org.cashudevkit.Transaction
 import org.cashudevkit.Wallet
 import org.cashudevkit.WalletConfig
 import org.cashudevkit.WalletSqliteDatabase
 import org.signal.core.util.logging.Log
+import org.thoughtcrime.securesms.keyvalue.SignalStore
 
 /**
  * CashuEngine backed by CDK Kotlin.
@@ -36,36 +37,56 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
   private val historyStore by lazy { CashuHistoryStore(appContext) }
   private val withdrawalStore by lazy { CashuWithdrawalStore(appContext) }
 
+  // Track which mint a given melt quote (or invoice) was created against, so we can melt on the same mint
+  private val meltQuoteMintCache: java.util.concurrent.ConcurrentHashMap<String, String> = java.util.concurrent.ConcurrentHashMap()
+
   private var db: WalletSqliteDatabase? = null
   private var wallet: Wallet? = null
-  private var initialized = false
+  private var initialized: Boolean = false
+  private var currentMintUrl: String? = null
 
-  private suspend fun ensureInitialized() = withContext(Dispatchers.IO) {
-    if (initialized) return@withContext
+  private suspend fun ensureInitialized(): Unit = withContext(Dispatchers.IO) {
+    val activeMint = try { SignalStore.payments.getActiveMint() } catch (_: Throwable) { DEFAULT_MINT_URL }
+    ensureInitializedForMint(activeMint)
+  }
+
+  private suspend fun ensureInitializedForMint(mintUrl: String) = withContext(Dispatchers.IO) {
+    if (initialized && wallet != null && currentMintUrl == mintUrl) {
+      return@withContext
+    }
+
     try {
+      // Tear down any existing state
+      runCatching { wallet?.close() }
+      runCatching { db?.close() }
+
+      // Open database
       val dbPath = appContext.filesDir.resolve(DB_NAME).absolutePath
       db = WalletSqliteDatabase(dbPath)
 
+      // Create wallet
       val mnemonic = mnemonicManager.getOrCreateMnemonic()
       val config = WalletConfig(targetProofCount = 10u)
 
       wallet = Wallet(
-        mintUrl = DEFAULT_MINT_URL,
+        mintUrl = mintUrl,
         unit = CurrencyUnit.Sat,
         mnemonic = mnemonic,
         db = db!!,
         config = config
       )
 
-      // Ensure we have mint keysets/info on first run
+      // Best-effort priming
       runCatching { wallet!!.refreshKeysets() }.onFailure { Log.w(TAG, "refreshKeysets failed during init", it) }
       runCatching { wallet!!.getMintInfo() }.onFailure { Log.w(TAG, "getMintInfo failed during init", it) }
 
       val p2pk = keyManager.getOrCreateP2pk()
-      Log.i(TAG, "Cashu wallet initialized. P2PK pub=${'$'}{p2pk.pubkeyHex.take(16)}…")
+      Log.i(TAG, "Cashu wallet initialized for $mintUrl. P2PK pub=${'$'}{p2pk.pubkeyHex.take(16)}…")
+
+      currentMintUrl = mintUrl
       initialized = true
     } catch (e: Throwable) {
-      Log.w(TAG, "Failed to init CashuEngine", e)
+      Log.w(TAG, "Failed to init CashuEngine for $mintUrl", e)
       throw e
     }
   }
@@ -84,15 +105,17 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
   override suspend fun createRequest(amountSats: Long?, memo: String?): String = withContext(Dispatchers.IO) {
     ensureInitialized()
     val pub = keyManager.getOrCreateP2pk().pubkeyHex
-    "cashu:request?mint=${'$'}DEFAULT_MINT_URL&pub=${'$'}pub&amount=${'$'}{amountSats ?: 0}"
+    val mint = try { SignalStore.payments.getActiveMint() } catch (_: Throwable) { DEFAULT_MINT_URL }
+    "cashu:request?mint=${'$'}mint&pub=${'$'}pub&amount=${'$'}{amountSats ?: 0}"
   }
 
   override suspend fun requestMintQuote(amountSats: Long): Result<MintQuote> = withContext(Dispatchers.IO) {
     ensureInitialized()
     runCatching {
       val cdkQuote = wallet!!.mintQuote(Amount(amountSats.toULong()), "Signal top-up") as org.cashudevkit.MintQuote
+      val activeMint = currentMintUrl ?: try { SignalStore.payments.getActiveMint() } catch (_: Throwable) { DEFAULT_MINT_URL }
       val quote = MintQuote(
-        mintUrl = DEFAULT_MINT_URL,
+        mintUrl = activeMint,
         amountSats = amountSats,
         feeSats = 0L,
         totalSats = amountSats,
@@ -132,17 +155,24 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
   }
 
   override suspend fun importToken(token: String): Result<ImportResult> = withContext(Dispatchers.IO) {
-    ensureInitialized()
     runCatching {
       val decoded = Token.decode(token)
-      val added = wallet!!.receive(decoded, ReceiveOptions(
-        amountSplitTarget = SplitTarget.None,
-        p2pkSigningKeys = emptyList(),
-        preimages = emptyList(),
-        metadata = emptyMap()
-      )) as Amount
-      decoded.close()
-      ImportResult(added.value.toLong())
+      try {
+        // Allow receiving from any mint; initialize wallet for that mint and add to known list
+        val tokenMint = runCatching { (decoded.mintUrl() as MintUrl).url }.getOrElse { DEFAULT_MINT_URL }
+        try { SignalStore.payments.addKnownMint(tokenMint) } catch (_: Throwable) {}
+        ensureInitializedForMint(tokenMint)
+
+        val added = wallet!!.receive(decoded, ReceiveOptions(
+          amountSplitTarget = SplitTarget.None,
+          p2pkSigningKeys = emptyList(),
+          preimages = emptyList(),
+          metadata = emptyMap()
+        )) as Amount
+        ImportResult(added.value.toLong())
+      } finally {
+        decoded.close()
+      }
     }
   }
 
@@ -157,7 +187,7 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
         id = it.id ?: (it.invoice ?: ("pending-" + it.createdAtMs)),
         timestampMs = it.createdAtMs,
         amountSats = it.amountSats,
-        memo = "Pending top-up ${it.amountSats} sat"
+        memo = "Pending top-up ${'$'}{it.amountSats} sat"
       )
     }
 
@@ -246,7 +276,8 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
       val cdkQuote = wallet!!.meltQuote(invoiceBolt11, null) as org.cashudevkit.MeltQuote
       val amountSats = (cdkQuote.amount as Amount).value.toLong()
       val feeReserveSats = (cdkQuote.feeReserve as Amount).value.toLong()
-      MeltQuote(
+      val mintForQuote = currentMintUrl ?: try { SignalStore.payments.getActiveMint() } catch (_: Throwable) { DEFAULT_MINT_URL }
+      val res = MeltQuote(
         amountSats = amountSats,
         feeSats = feeReserveSats,
         totalSats = amountSats + feeReserveSats,
@@ -254,14 +285,27 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
         invoiceBolt11 = cdkQuote.request,
         id = cdkQuote.id
       )
+      // Cache mint association for melt step, keyed by id and invoice
+      if (res.id != null) {
+        meltQuoteMintCache[res.id!!] = mintForQuote
+      }
+      meltQuoteMintCache[res.invoiceBolt11] = mintForQuote
+      res
     }
   }
 
   override suspend fun melt(quote: MeltQuote): Result<TxId> = withContext(Dispatchers.IO) {
-    ensureInitialized()
+    // Ensure we are on the same mint used for the quote
+    val preferredMint: String? = quote.id?.let { meltQuoteMintCache[it] } ?: meltQuoteMintCache[quote.invoiceBolt11]
+    if (preferredMint != null) {
+      ensureInitializedForMint(preferredMint)
+    } else {
+      ensureInitialized() // fallback to active
+    }
+
     runCatching {
       val quoteId = quote.id ?: throw IllegalStateException("Missing melt quote id")
-      val melted = wallet!!.melt(quoteId) as org.cashudevkit.Melted
+      val melted = wallet!!.melt(quoteId) as Melted
       val paidAmountSats = (melted.amount as Amount).value.toLong()
       val feePaidSats = (melted.feePaid as Amount).value.toLong()
       withdrawalStore.add(CashuWithdrawalStore.Withdrawal(

@@ -178,6 +178,7 @@ android {
   }
 
   defaultConfig {
+    applicationId = "com.signal.cashu"
     versionCode = (canonicalVersionCode * maxHotfixVersions) + currentHotfixVersion
     versionName = canonicalVersionName
 

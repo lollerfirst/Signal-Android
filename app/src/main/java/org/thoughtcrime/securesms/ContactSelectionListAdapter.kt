@@ -32,6 +32,7 @@ class ContactSelectionListAdapter(
     registerFactory(EmptyModel::class.java, LayoutFactory({ EmptyViewHolder(it) }, R.layout.contact_selection_empty_state))
     registerFactory(FindByUsernameModel::class.java, LayoutFactory({ FindByUsernameViewHolder(it, onClickCallbacks::onFindByUsernameClicked) }, R.layout.contact_selection_find_by_username_item))
     registerFactory(FindByPhoneNumberModel::class.java, LayoutFactory({ FindByPhoneNumberViewHolder(it, onClickCallbacks::onFindByPhoneNumberClicked) }, R.layout.contact_selection_find_by_phone_number_item))
+    registerFactory(PayInvoiceModel::class.java, LayoutFactory({ PayInvoiceViewHolder(it, onClickCallbacks::onPayInvoiceClicked) }, R.layout.contact_selection_pay_invoice_item))
   }
 
   class NewGroupModel : MappingModel<NewGroupModel> {
@@ -58,6 +59,12 @@ class ContactSelectionListAdapter(
     override fun areItemsTheSame(newItem: FindContactsBannerModel): Boolean = true
     override fun areContentsTheSame(newItem: FindContactsBannerModel): Boolean = true
   }
+  class MoreHeaderModel : MappingModel<MoreHeaderModel> {
+    override fun areItemsTheSame(newItem: MoreHeaderModel): Boolean = true
+    override fun areContentsTheSame(newItem: MoreHeaderModel): Boolean = true
+  }
+
+
 
   class FindByUsernameModel : MappingModel<FindByUsernameModel> {
     override fun areItemsTheSame(newItem: FindByUsernameModel): Boolean = true
@@ -69,10 +76,9 @@ class ContactSelectionListAdapter(
     override fun areContentsTheSame(newItem: FindByPhoneNumberModel): Boolean = true
   }
 
-  class MoreHeaderModel : MappingModel<MoreHeaderModel> {
-    override fun areItemsTheSame(newItem: MoreHeaderModel): Boolean = true
-
-    override fun areContentsTheSame(newItem: MoreHeaderModel): Boolean = true
+  class PayInvoiceModel : MappingModel<PayInvoiceModel> {
+    override fun areItemsTheSame(newItem: PayInvoiceModel): Boolean = true
+    override fun areContentsTheSame(newItem: PayInvoiceModel): Boolean = true
   }
 
   private class InviteToSignalViewHolder(itemView: View, onClickListener: () -> Unit) : MappingViewHolder<InviteToSignalModel>(itemView) {
@@ -124,6 +130,11 @@ class ContactSelectionListAdapter(
       headerTextView.setText(R.string.contact_selection_activity__more)
     }
   }
+  private class PayInvoiceViewHolder(itemView: View, onClickListener: () -> Unit) : MappingViewHolder<PayInvoiceModel>(itemView) {
+    init { itemView.setOnClickListener { onClickListener() } }
+    override fun bind(model: PayInvoiceModel) = Unit
+  }
+
 
   private class EmptyViewHolder(itemView: View) : MappingViewHolder<EmptyModel>(itemView) {
 
@@ -162,7 +173,8 @@ class ContactSelectionListAdapter(
       FIND_CONTACTS("find-contacts"),
       FIND_CONTACTS_BANNER("find-contacts-banner"),
       FIND_BY_USERNAME("find-by-username"),
-      FIND_BY_PHONE_NUMBER("find-by-phone-number");
+      FIND_BY_PHONE_NUMBER("find-by-phone-number"),
+      PAY_INVOICE("pay-invoice");
 
       companion object {
         fun fromCode(code: String) = entries.first { it.code == code }
@@ -188,6 +200,7 @@ class ContactSelectionListAdapter(
         ArbitraryRow.FIND_CONTACTS_BANNER -> FindContactsBannerModel()
         ArbitraryRow.FIND_BY_PHONE_NUMBER -> FindByPhoneNumberModel()
         ArbitraryRow.FIND_BY_USERNAME -> FindByUsernameModel()
+        ArbitraryRow.PAY_INVOICE -> PayInvoiceModel()
       }
     }
   }
@@ -200,5 +213,6 @@ class ContactSelectionListAdapter(
     fun onDismissFindContactsBannerClicked()
     fun onFindByPhoneNumberClicked()
     fun onFindByUsernameClicked()
+    fun onPayInvoiceClicked()
   }
 }

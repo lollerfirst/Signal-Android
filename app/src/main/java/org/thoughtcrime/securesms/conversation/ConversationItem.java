@@ -1076,6 +1076,7 @@ public final class ConversationItem extends RelativeLayout implements BindableCo
         bodyText.setMaxLines(Integer.MAX_VALUE);
       }
 
+      if (org.thoughtcrime.securesms.conversation.v2.items.CashuTokenInlineRenderer.maybeAttachReceiveUiClassic(bodyBubble, bodyText, conversationMessage)) { return; }
       bodyText.setText(StringUtil.trim(styledText));
       bodyText.setVisibility(View.VISIBLE);
 

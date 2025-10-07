@@ -4148,6 +4148,7 @@
     <string name="PaymentsHomeFragment__send">Send</string>
     <string name="PaymentsHomeFragment__sent_s">Sent %1$s</string>
     <string name="PaymentsHomeFragment__received_s">Received %1$s</string>
+    <string name="PaymentsHomeFragment__pay_invoice">Withdraw</string>
     <string name="PaymentsHomeFragment__transfer_to_exchange">Transfer to exchange</string>
     <string name="PaymentsHomeFragment__currency_conversion">Currency conversion</string>
     <string name="PaymentsHomeFragment__deactivate_payments">Deactivate payments</string>

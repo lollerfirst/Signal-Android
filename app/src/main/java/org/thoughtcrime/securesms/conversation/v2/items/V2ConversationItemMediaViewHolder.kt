@@ -42,9 +42,9 @@ class V2ConversationItemMediaViewHolder<Model : MappingModel<Model>>(
     }
 
     presentThumbnail()
-    super.bind(model)
-    presentQuote()
-    updateMediaConstraints()
+    // Try Cashu inline rendering on the media text body as well
+    CashuTokenInlineRenderer.resetIfPresent(binding.textBridge)
+    if (CashuTokenInlineRenderer.maybeAttachReceiveUi(binding.textBridge, conversationMessage)) return
   }
 
   private fun updateMediaConstraints() {

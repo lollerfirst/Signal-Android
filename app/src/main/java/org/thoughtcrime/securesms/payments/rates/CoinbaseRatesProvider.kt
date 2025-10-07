@@ -10,6 +10,7 @@ import java.io.IOException
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Currency
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Simple FX provider using Coinbase spot price API to convert sats <-> fiat.
@@ -38,10 +39,16 @@ class CoinbaseRatesProvider(
 
   companion object {
     private val TAG = Log.tag(CoinbaseRatesProvider::class.java)
+    // Global cache: fetch once per currency for the entire app process
+    private val CACHE = ConcurrentHashMap<String, BigDecimal>()
   }
 
   override suspend fun btcPriceFiat(currency: Currency): Result<BigDecimal> = withContext(Dispatchers.IO) {
     val code = currency.currencyCode.uppercase()
+
+    // Return cached value if present (do not refetch)
+    CACHE[code]?.let { return@withContext Result.success(it) }
+
     val url = "https://api.coinbase.com/v2/prices/BTC-$code/spot"
     val request = Request.Builder().url(url).header("Accept", "application/json").build()
     try {
@@ -51,11 +58,14 @@ class CoinbaseRatesProvider(
         val json = JSONObject(body)
         val amountStr = json.getJSONObject("data").getString("amount")
         val value = BigDecimal(amountStr)
+        CACHE[code] = value
         Result.success(value)
       }
     } catch (e: Throwable) {
       Log.w(TAG, "coinbase fx error", e)
-      Result.failure(e)
+      // Fallback to any cached value if present
+      val fallback = CACHE[code]
+      if (fallback != null) Result.success(fallback) else Result.failure(e)
     }
   }
 }

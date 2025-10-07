@@ -1,32 +1,28 @@
 package org.thoughtcrime.securesms.payments.confirm;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
-import org.signal.core.util.money.FiatMoney;
 import org.thoughtcrime.securesms.payments.Payee;
 import org.whispersystems.signalservice.api.payments.Money;
 
-import java.util.UUID;
-
 public class ConfirmPaymentState {
   private final Payee     payee;
-  private final Money     balance;
+  private final CharSequence balanceText; // UI-ready balance label (e.g., "1,234 sat") when Cashu, MOB string otherwise
   private final Money     amount;
   private final String    note;
   private final Money     fee;
   private final FeeStatus feeStatus;
-  private final FiatMoney exchange;
+  private final org.signal.core.util.money.FiatMoney exchange;
   private final Status    status;
   private final Money     total;
-  private final UUID      paymentId;
+  private final java.util.UUID      paymentId;
 
   public ConfirmPaymentState(@NonNull Payee payee,
                              @NonNull Money amount,
-                             @Nullable String note)
+                             String note)
   {
     this(payee,
-         amount.toZero(),
+         amount.toZero().toString(org.whispersystems.signalservice.api.payments.FormatterOptions.defaults()),
          amount,
          note,
          amount.toZero(),
@@ -37,17 +33,17 @@ public class ConfirmPaymentState {
   }
 
   private ConfirmPaymentState(@NonNull Payee payee,
-                             @NonNull Money balance,
+                             @NonNull CharSequence balanceText,
                              @NonNull Money amount,
-                             @Nullable String note,
+                             String note,
                              @NonNull Money fee,
                              @NonNull FeeStatus feeStatus,
-                             @NonNull FiatMoney exchange,
+                             org.signal.core.util.money.FiatMoney exchange,
                              @NonNull Status status,
-                             @Nullable UUID paymentId)
+                             java.util.UUID paymentId)
   {
     this.payee     = payee;
-    this.balance   = balance;
+    this.balanceText   = balanceText;
     this.amount    = amount;
     this.note      = note;
     this.fee       = fee;
@@ -62,15 +58,15 @@ public class ConfirmPaymentState {
     return payee;
   }
 
-  public @NonNull Money getBalance() {
-    return balance;
+  public @NonNull CharSequence getBalanceText() {
+    return balanceText;
   }
 
   public @NonNull Money getAmount() {
     return amount;
   }
 
-  public @Nullable String getNote() {
+  public String getNote() {
     return note;
   }
 
@@ -82,7 +78,7 @@ public class ConfirmPaymentState {
     return feeStatus;
   }
 
-  public @Nullable FiatMoney getExchange() {
+  public org.signal.core.util.money.FiatMoney getExchange() {
     return exchange;
   }
 
@@ -94,40 +90,40 @@ public class ConfirmPaymentState {
     return total;
   }
 
-  public @Nullable UUID getPaymentId() {
+  public java.util.UUID getPaymentId() {
     return paymentId;
   }
 
   public @NonNull ConfirmPaymentState updateStatus(@NonNull Status status) {
-    return new ConfirmPaymentState(this.payee, this.balance, this.amount, this.note, this.fee, this.feeStatus, this.exchange, status, this.paymentId);
+    return new ConfirmPaymentState(this.payee, this.balanceText, this.amount, this.note, this.fee, this.feeStatus, this.exchange, status, this.paymentId);
   }
 
-  public @NonNull ConfirmPaymentState updateBalance(@NonNull Money balance) {
-    return new ConfirmPaymentState(this.payee, balance, this.amount, this.note, this.fee, this.feeStatus, this.exchange, this.status, this.paymentId);
+  public @NonNull ConfirmPaymentState updateBalanceText(@NonNull CharSequence balanceText) {
+    return new ConfirmPaymentState(this.payee, balanceText, this.amount, this.note, this.fee, this.feeStatus, this.exchange, this.status, this.paymentId);
   }
 
   public @NonNull ConfirmPaymentState updateFee(@NonNull Money fee) {
-    return new ConfirmPaymentState(this.payee, this.balance, this.amount, this.note, fee, FeeStatus.SET, this.exchange, this.status, this.paymentId);
+    return new ConfirmPaymentState(this.payee, this.balanceText, this.amount, this.note, fee, FeeStatus.SET, this.exchange, this.status, this.paymentId);
   }
 
   public @NonNull ConfirmPaymentState updateFeeStillLoading() {
-    return new ConfirmPaymentState(this.payee, this.balance, this.amount, this.note, this.amount.toZero(), FeeStatus.STILL_LOADING, this.exchange, this.status, this.paymentId);
+    return new ConfirmPaymentState(this.payee, this.balanceText, this.amount, this.note, this.amount.toZero(), FeeStatus.STILL_LOADING, this.exchange, this.status, this.paymentId);
   }
 
   public @NonNull ConfirmPaymentState updateFeeError() {
-    return new ConfirmPaymentState(this.payee, this.balance, this.amount, this.note, this.amount.toZero(), FeeStatus.ERROR, this.exchange, this.status, this.paymentId);
+    return new ConfirmPaymentState(this.payee, this.balanceText, this.amount, this.note, this.amount.toZero(), FeeStatus.ERROR, this.exchange, this.status, this.paymentId);
   }
 
-  public @NonNull ConfirmPaymentState updatePaymentId(@Nullable UUID paymentId) {
-    return new ConfirmPaymentState(this.payee, this.balance, this.amount, this.note, this.fee, this.feeStatus, this.exchange, this.status, paymentId);
+  public @NonNull ConfirmPaymentState updatePaymentId(java.util.UUID paymentId) {
+    return new ConfirmPaymentState(this.payee, this.balanceText, this.amount, this.note, this.fee, this.feeStatus, this.exchange, this.status, paymentId);
   }
 
-  public @NonNull ConfirmPaymentState updateExchange(@Nullable FiatMoney exchange) {
-    return new ConfirmPaymentState(this.payee, this.balance, this.amount, this.note, this.fee, this.feeStatus, exchange, this.status, this.paymentId);
+  public @NonNull ConfirmPaymentState updateExchange(org.signal.core.util.money.FiatMoney exchange) {
+    return new ConfirmPaymentState(this.payee, this.balanceText, this.amount, this.note, this.fee, this.feeStatus, exchange, this.status, this.paymentId);
   }
 
   public @NonNull ConfirmPaymentState timeout() {
-    return new ConfirmPaymentState(this.payee, this.balance, this.amount, this.note, this.fee, this.feeStatus, this.exchange, Status.TIMEOUT, this.paymentId);
+    return new ConfirmPaymentState(this.payee, this.balanceText, this.amount, this.note, this.fee, this.feeStatus, this.exchange, Status.TIMEOUT, this.paymentId);
   }
 
   enum Status {

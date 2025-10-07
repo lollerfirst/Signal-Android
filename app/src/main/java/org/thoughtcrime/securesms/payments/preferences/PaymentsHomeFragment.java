@@ -105,6 +105,7 @@ public class PaymentsHomeFragment extends LoggingFragment {
     MoneyView           balance          = view.findViewById(R.id.payments_home_fragment_header_balance);
     TextView            exchange         = view.findViewById(R.id.payments_home_fragment_header_exchange);
     View                addMoney         = view.findViewById(R.id.button_start_frame);
+    View                withdraw         = view.findViewById(R.id.button_center_frame);
     View                sendMoney        = view.findViewById(R.id.button_end_frame);
     View                refresh          = view.findViewById(R.id.payments_home_fragment_header_refresh);
     LottieAnimationView refreshAnimation = view.findViewById(R.id.payments_home_fragment_header_refresh_animation);
@@ -126,6 +127,18 @@ public class PaymentsHomeFragment extends LoggingFragment {
         showPaymentsDisabledDialog();
       }
     });
+
+    // Withdraw (Lightning invoice / melt)
+    withdraw.setOnClickListener(v -> {
+      if (viewModel.isEnclaveFailurePresent()) {
+        showUpdateIsRequiredDialog();
+      } else if (SignalStore.payments().getPaymentsAvailability().isSendAllowed()) {
+        SafeNavigation.safeNavigate(NavHostFragment.findNavController(this), R.id.action_paymentsHome_to_paymentsTransfer);
+      } else {
+        showPaymentsDisabledDialog();
+      }
+    });
+
     sendMoney.setOnClickListener(v -> {
       if (viewModel.isEnclaveFailurePresent()) {
         showUpdateIsRequiredDialog();
@@ -138,6 +151,29 @@ public class PaymentsHomeFragment extends LoggingFragment {
 
     PaymentsHomeAdapter adapter = new PaymentsHomeAdapter(new HomeCallbacks());
     recycler.setAdapter(adapter);
+    if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
+      View mintIcon = view.findViewById(R.id.payments_home_fragment_header_mint);
+      if (mintIcon != null) {
+        // Initialize accessibility description with current active mint
+        try {
+          String activeMintUrl = org.thoughtcrime.securesms.keyvalue.SignalStore.payments().getActiveMint();
+          if (activeMintUrl != null) {
+            String host = activeMintUrl;
+            try {
+              java.net.URI uri = new java.net.URI(activeMintUrl);
+              if (uri.getHost() != null) host = uri.getHost();
+            } catch (Throwable ignore) {}
+            mintIcon.setContentDescription("Active mint: " + host);
+          }
+        } catch (Throwable ignore) {}
+        mintIcon.setOnClickListener(v -> showMintSelectorBottomSheet());
+        mintIcon.setVisibility(View.VISIBLE);
+      }
+    } else {
+      View mintIcon = view.findViewById(R.id.payments_home_fragment_header_mint);
+      if (mintIcon != null) mintIcon.setVisibility(View.GONE);
+    }
+
 
     viewModel = new ViewModelProvider(this, new PaymentsHomeViewModel.Factory()).get(PaymentsHomeViewModel.class);
 
@@ -320,6 +356,96 @@ public class PaymentsHomeFragment extends LoggingFragment {
         .setNegativeButton(R.string.PaymentsHomeFragment__cancel, (dialog, which) -> {})
         .setCancelable(false)
         .show();
+  }
+
+  private void showMintSelectorBottomSheet() {
+    List<String> mints = org.thoughtcrime.securesms.keyvalue.SignalStore.payments().getKnownMints();
+    String active = org.thoughtcrime.securesms.keyvalue.SignalStore.payments().getActiveMint();
+    CharSequence[] items = new CharSequence[mints.size() + 1];
+    for (int i = 0; i < mints.size(); i++) {
+      String url = mints.get(i);
+      String host = url;
+      try {
+        java.net.URI uri = new java.net.URI(url);
+        if (uri.getHost() != null) host = uri.getHost();
+      } catch (Throwable ignore) {}
+      items[i] = host + (url.equals(active) ? "  ✓" : "");
+    }
+    items[mints.size()] = getString(R.string.PaymentsHomeFragment__add_mint);
+
+    new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+      .setTitle(R.string.PaymentsHomeFragment__select_mint)
+      .setItems(items, (dialog, which) -> {
+        if (which == mints.size()) {
+          promptAddMint();
+        } else {
+          String chosen = mints.get(which);
+          if (!chosen.equals(active)) {
+            org.thoughtcrime.securesms.keyvalue.SignalStore.payments().setActiveMint(chosen);
+            viewModel.updateStore();
+            // Update mint icon content description immediately
+            View root = getView();
+            if (root != null) {
+              View mintIconView = root.findViewById(R.id.payments_home_fragment_header_mint);
+              String host = chosen;
+              try {
+                java.net.URI uri = new java.net.URI(chosen);
+                if (uri.getHost() != null) host = uri.getHost();
+              } catch (Throwable ignore) {}
+              if (mintIconView != null) {
+                mintIconView.setContentDescription("Active mint: " + host);
+              }
+            }
+          }
+        }
+      })
+      .show();
+  }
+
+  private void promptAddMint() {
+    final android.widget.EditText input = new android.widget.EditText(requireContext());
+    input.setHint("https://mint.example.com");
+    input.setSingleLine(true);
+    int pad = (int) (16 * getResources().getDisplayMetrics().density);
+    input.setPadding(pad, pad, pad, pad);
+
+    new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+      .setTitle(R.string.PaymentsHomeFragment__add_mint)
+      .setView(input)
+      .setPositiveButton(android.R.string.ok, (d, w) -> {
+        String url = input.getText().toString().trim();
+        if (url.isEmpty()) return;
+        // Minimal validation
+        try {
+          java.net.URI uri = new java.net.URI(url);
+          if (uri.getScheme() == null) url = "https://" + url;
+        } catch (Throwable t) {
+          // Try prefixing
+          url = "https://" + url;
+        }
+        try {
+          org.thoughtcrime.securesms.keyvalue.SignalStore.payments().addKnownMint(url);
+          org.thoughtcrime.securesms.keyvalue.SignalStore.payments().setActiveMint(url);
+          viewModel.updateStore();
+          // Update mint icon description
+          View root = getView();
+          if (root != null) {
+            View mintIconView = root.findViewById(R.id.payments_home_fragment_header_mint);
+            String host = url;
+            try {
+              java.net.URI uri2 = new java.net.URI(url);
+              if (uri2.getHost() != null) host = uri2.getHost();
+            } catch (Throwable ignore) {}
+            if (mintIconView != null) {
+              mintIconView.setContentDescription("Active mint: " + host);
+            }
+          }
+        } catch (Throwable t) {
+          Toast.makeText(requireContext(), getString(R.string.PaymentsHomeFragment__invalid_mint_url), Toast.LENGTH_SHORT).show();
+        }
+      })
+      .setNegativeButton(android.R.string.cancel, null)
+      .show();
   }
 
   private boolean onMenuItemSelected(@NonNull MenuItem item) {

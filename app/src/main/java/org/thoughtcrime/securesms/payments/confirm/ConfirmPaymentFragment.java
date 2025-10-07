@@ -198,6 +198,11 @@ public class ConfirmPaymentFragment extends BottomSheetDialogFragment {
 
           list.add(new ConfirmPaymentAdapter.Divider());
           list.add(new ConfirmPaymentAdapter.TotalLineItem(getString(R.string.ConfirmPayment__total_amount), satsText));
+
+          // Balance footer in sats
+          long satsAvailable = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext()).getSpendableSatsBlocking();
+          String balanceText = java.text.NumberFormat.getInstance(java.util.Locale.getDefault()).format(satsAvailable) + " sat";
+          list.add(new ConfirmPaymentAdapter.ConfirmPaymentStatus(state.getStatus(), state.getFeeStatus(), balanceText));
           break;
         }
         // Default (MobileCoin) path
@@ -209,9 +214,11 @@ public class ConfirmPaymentFragment extends BottomSheetDialogFragment {
         list.add(new ConfirmPaymentAdapter.LineItem(getString(R.string.ConfirmPayment__network_fee), state.getFee().toString(options)));
         list.add(new ConfirmPaymentAdapter.Divider());
         list.add(new ConfirmPaymentAdapter.TotalLineItem(getString(R.string.ConfirmPayment__total_amount), state.getTotal().toString(options)));
+
+        // MOB balance footer
+        list.add(new ConfirmPaymentAdapter.ConfirmPaymentStatus(state.getStatus(), state.getFeeStatus(), state.getBalanceText()));
     }
 
-    list.add(new ConfirmPaymentAdapter.ConfirmPaymentStatus(state.getStatus(), state.getFeeStatus(), state.getBalance()));
     return list;
   }
 

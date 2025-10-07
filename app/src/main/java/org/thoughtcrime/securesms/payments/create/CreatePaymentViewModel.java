@@ -54,9 +54,10 @@ public class CreatePaymentViewModel extends ViewModel {
     this.spendableBalance = SignalStore.payments().cashuEnabled()
         ? org.thoughtcrime.securesms.util.livedata.LiveDataUtil.mapAsync(new DefaultValueLiveData<>(true), x -> {
             try {
-              return Money.parseOrThrow(String.valueOf(new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(AppDependencies.getApplication()).getSpendableSatsBlocking()));
+              long sats = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(AppDependencies.getApplication()).getSpendableSatsBlocking();
+              return Money.mobileCoin(new java.math.BigDecimal(sats));
             } catch (Throwable t) {
-              return Money.MobileCoin.ZERO; // placeholder, we only use text in Cashu UI
+              return Money.MobileCoin.ZERO; // placeholder for balance
             }
           })
         : Transformations.map(SignalStore.payments().liveMobileCoinBalance(), Balance::getTransferableAmount);
@@ -108,10 +109,11 @@ public class CreatePaymentViewModel extends ViewModel {
   @NonNull LiveData<CharSequence> getNote() { return Transformations.distinctUntilChanged(note); }
   @NonNull LiveData<Boolean> isValidAmount() {
     if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
-      return androidx.lifecycle.Transformations.map(inputState.getStateLiveData(), s -> {
+      androidx.lifecycle.LiveData<java.lang.Long> satsBalance = org.thoughtcrime.securesms.util.livedata.LiveDataUtil.mapAsync(new DefaultValueLiveData<>(true), x -> new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(AppDependencies.getApplication()).getSpendableSatsBlocking());
+      return org.thoughtcrime.securesms.util.livedata.LiveDataUtil.combineLatest(satsBalance, inputState.getStateLiveData(), (balSats, s) -> {
         try {
           long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(s.getMoneyAmount());
-          return sats > 0L;
+          return sats > 0L && sats <= balSats;
         } catch (Throwable t) { return false; }
       });
     }
@@ -135,6 +137,11 @@ public class CreatePaymentViewModel extends ViewModel {
   void updateAmount(@NonNull Context context, @NonNull AmountKeyboardGlyph glyph) { inputState.update(s -> updateAmount(context, s, glyph)); }
 
   private @NonNull InputState updateAmount(@NonNull Context context, @NonNull InputState inputState, @NonNull AmountKeyboardGlyph glyph) {
+    if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
+      // In Cashu mode, the numeric input is always sats. Toggling only swaps which label is primary.
+      return updateMoneyAmount(context, inputState, glyph);
+    }
+
     switch (inputState.getInputTarget()) {
       case FIAT_MONEY:
         return updateFiatAmount(context, inputState, glyph, SignalStore.payments().currentCurrency());

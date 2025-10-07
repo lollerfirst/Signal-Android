@@ -15,8 +15,6 @@ import org.thoughtcrime.securesms.util.SpanUtil;
 import org.thoughtcrime.securesms.util.adapter.mapping.MappingAdapter;
 import org.thoughtcrime.securesms.util.adapter.mapping.MappingModel;
 import org.thoughtcrime.securesms.util.adapter.mapping.MappingViewHolder;
-import org.whispersystems.signalservice.api.payments.FormatterOptions;
-import org.whispersystems.signalservice.api.payments.Money;
 
 public class ConfirmPaymentAdapter extends MappingAdapter {
   public ConfirmPaymentAdapter(@NonNull Callbacks callbacks) {
@@ -97,12 +95,12 @@ public class ConfirmPaymentAdapter extends MappingAdapter {
   public static class ConfirmPaymentStatus implements MappingModel<ConfirmPaymentStatus> {
     private final Status                        status;
     private final ConfirmPaymentState.FeeStatus feeStatus;
-    private final Money                         balance;
+    private final CharSequence                  balanceText;
 
-    public ConfirmPaymentStatus(@NonNull Status status, @NonNull ConfirmPaymentState.FeeStatus feeStatus, @NonNull Money balance) {
-      this.status    = status;
-      this.feeStatus = feeStatus;
-      this.balance   = balance;
+    public ConfirmPaymentStatus(@NonNull Status status, @NonNull ConfirmPaymentState.FeeStatus feeStatus, @NonNull CharSequence balanceText) {
+      this.status      = status;
+      this.feeStatus   = feeStatus;
+      this.balanceText = balanceText;
     }
 
     public int getConfirmPaymentVisibility() {
@@ -120,7 +118,7 @@ public class ConfirmPaymentAdapter extends MappingAdapter {
 
     public @NonNull CharSequence getInfoText(@NonNull Context context) {
       switch (status) {
-        case CONFIRM:    return context.getString(R.string.ConfirmPayment__balance_s, balance.toString(FormatterOptions.defaults()));
+        case CONFIRM:    return context.getString(R.string.ConfirmPayment__balance_s, balanceText);
         case SUBMITTING: return context.getString(R.string.ConfirmPayment__submitting_payment);
         case PROCESSING: return context.getString(R.string.ConfirmPayment__processing_payment);
         case DONE:       return context.getString(R.string.ConfirmPayment__payment_complete);
@@ -139,7 +137,7 @@ public class ConfirmPaymentAdapter extends MappingAdapter {
     public boolean areContentsTheSame(@NonNull ConfirmPaymentStatus newItem) {
       return status == newItem.status &&
              feeStatus == newItem.feeStatus &&
-             balance.equals(newItem.balance);
+             String.valueOf(balanceText).contentEquals(newItem.balanceText);
     }
   }
 
