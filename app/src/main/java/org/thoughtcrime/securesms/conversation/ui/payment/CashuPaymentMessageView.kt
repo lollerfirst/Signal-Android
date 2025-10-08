@@ -48,7 +48,8 @@ class CashuPaymentMessageView @JvmOverloads constructor(
 
     showProgress(false)
     showSpinner(false)
-    setReceiveButtonVisible(!outgoing)
+    setReceiveButtonVisible(true)
+    setReceiveButtonEnabled(true)
   }
 
   fun bindInProgress(directionText: String, outgoing: Boolean, recipient: Recipient, colorizer: Colorizer) {
@@ -68,21 +69,32 @@ class CashuPaymentMessageView @JvmOverloads constructor(
 
   fun showSpinner(show: Boolean) {
     binding.cashuPaymentReceiveSpinner.visible = show
-    binding.cashuPaymentReceiveIcon.visible = !show
+    binding.cashuPaymentReceiveButton.visible = !show
   }
 
   fun setReceiveButtonEnabled(enabled: Boolean) {
     binding.cashuPaymentReceiveContainer.isEnabled = enabled
+    binding.cashuPaymentReceiveButton.isEnabled = enabled
   }
 
   fun setReceiveButtonVisible(visible: Boolean) {
     binding.cashuPaymentReceiveContainer.visible = visible
     binding.cashuPaymentReceiveContainer.isEnabled = visible
+    binding.cashuPaymentReceiveButton.isEnabled = visible
+    if (!visible) {
+      binding.cashuPaymentReceiveSpinner.visible = false
+      binding.cashuPaymentReceiveButton.visible = false
+    } else {
+      val spinnerVisible = binding.cashuPaymentReceiveSpinner.visibility == View.VISIBLE
+      binding.cashuPaymentReceiveButton.visible = !spinnerVisible
+    }
   }
 
   fun updateAmountText(amountText: String) {
     binding.cashuPaymentAmount.text = amountText
   }
+
+  fun getReceiveButton(): View = binding.cashuPaymentReceiveButton
 
   fun getReceiveContainer(): View = binding.cashuPaymentReceiveContainer
 

@@ -31,6 +31,15 @@ object CashuTokenInlineRenderer {
   private val TAG = Log.tag(CashuTokenInlineRenderer::class.java)
 
   private data class TokenMeta(val sats: Long?, val memo: String?)
+  private fun removeExistingPill(parent: ViewGroup) {
+    for (i in parent.childCount - 1 downTo 0) {
+      if (parent.getChildAt(i) is CashuPaymentMessageView) {
+        parent.removeViewAt(i)
+      }
+    }
+  }
+
+
 
   private data class PillBinding(
     val view: CashuPaymentMessageView,
@@ -92,13 +101,13 @@ object CashuTokenInlineRenderer {
   }
 
   fun resetIfPresent(binding: TextOnlyBinding) {
-    binding.bodyWrapper.findViewById<View>(R.id.cashu_payment_root)?.let { binding.bodyWrapper.removeView(it) }
+    removeExistingPill(binding.bodyWrapper)
     binding.body.visibility = View.VISIBLE
   }
 
   fun maybeAttachReceiveUi(binding: TextOnlyBinding, conversationMessage: ConversationMessage): Boolean {
     val parent = binding.bodyWrapper
-    parent.findViewById<View>(R.id.cashu_payment_root)?.let { parent.removeView(it) }
+    removeExistingPill(parent)
 
     val token = findToken(binding.body.text?.toString(), parent.context, conversationMessage) ?: return false
 
@@ -112,11 +121,11 @@ object CashuTokenInlineRenderer {
   }
 
   fun resetIfPresent(parent: ViewGroup) {
-    parent.findViewById<View>(R.id.cashu_payment_root)?.let { parent.removeView(it) }
+    removeExistingPill(parent)
   }
 
   fun maybeAttachReceiveUi(parent: ViewGroup, body: TextView, conversationMessage: ConversationMessage): Boolean {
-    parent.findViewById<View>(R.id.cashu_payment_root)?.let { parent.removeView(it) }
+    removeExistingPill(parent)
 
     val token = findToken(body.text?.toString(), parent.context, conversationMessage) ?: return false
 
@@ -169,16 +178,12 @@ object CashuTokenInlineRenderer {
   private fun configureReceive(pillBinding: PillBinding, token: String, conversationMessage: ConversationMessage) {
     val pill = pillBinding.view
 
-    if (pillBinding.outgoing) {
-      pill.setReceiveButtonVisible(false)
-      return
-    }
-
     pill.setReceiveButtonVisible(true)
     pill.setReceiveButtonEnabled(true)
 
+    val receiveButton = pill.getReceiveButton()
     val receiveContainer = pill.getReceiveContainer()
-    receiveContainer.setOnClickListener {
+    val clickListener = View.OnClickListener {
       pill.setReceiveButtonEnabled(false)
       pill.showSpinner(true)
 
@@ -209,6 +214,8 @@ object CashuTokenInlineRenderer {
         }
       }
     }
+    receiveContainer.setOnClickListener(clickListener)
+    receiveButton.setOnClickListener(clickListener)
   }
 
   private fun addPill(parent: ViewGroup, anchor: View, pill: View) {
