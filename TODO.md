@@ -1,10 +1,6 @@
 - [x] Inspect MobileCoin payment message rendering
   - [x] Find layout files/classes handling MobileCoin pill
   - [x] Review style and binding logic
-- [ ] Apply MobileCoin pill styling to Cashu token rendering
-  - [ ] Remove legacy Cashu receive UI components
-  - [ ] Implement Cashu pill layout mirroring MobileCoin
-  - [ ] Wire Cashu pill into conversation rendering
-  - [ ] Integrate Cashu receive button with new pill
-  - [ ] Hook receive action to renderer logic
-- [ ] Verify updated Cashu pill appearance in chat
+- [ ] Cashu UI polish and bug fixes
+  - [ ] Handle Cashu receive failure with user-facing toast
+  - [ ] Investigate missing inline render for truncated ("Read more") tokens

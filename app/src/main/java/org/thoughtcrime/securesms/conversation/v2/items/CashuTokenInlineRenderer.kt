@@ -17,6 +17,8 @@ import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.conversation.ConversationMessage
 import org.thoughtcrime.securesms.conversation.colors.Colorizer
 import org.thoughtcrime.securesms.conversation.ui.payment.CashuPaymentMessageView
+import android.widget.Toast
+
 import org.thoughtcrime.securesms.dependencies.AppDependencies
 import org.thoughtcrime.securesms.mms.PartAuthority
 import org.thoughtcrime.securesms.payments.engine.CashuReceiveStore
@@ -190,9 +192,9 @@ object CashuTokenInlineRenderer {
       val engine = PaymentsEngineProvider.get(AppDependencies.application)
 
       CoroutineScope(Dispatchers.Main).launch {
+        val ctx = pill.context
         val result = withContext(Dispatchers.IO) { engine.importToken(token) }
         result.onSuccess { received ->
-          val ctx = pill.context
           val peer = conversationMessage.messageRecord.fromRecipient
           val memo = "Received from|rid:" + peer.id.serialize() + "|name:" + peer.getDisplayName(ctx).replace("|", "｜")
           try {
@@ -205,12 +207,14 @@ object CashuTokenInlineRenderer {
           pill.showSpinner(false)
           pill.setReceiveButtonVisible(false)
         }.onFailure { throwable ->
-          val ctx = pill.context
           Log.e(TAG, "Cashu receive failed", throwable)
           pill.showSpinner(false)
           pill.setReceiveButtonEnabled(true)
           pill.setReceiveButtonVisible(true)
-          pill.updateAmountText(ctx.getString(R.string.cashu_token_receive_failed))
+          pill.updateAmountText(pillBinding.amountText)
+
+          val message = throwable.message ?: ctx.getString(R.string.cashu_token_receive_failed)
+          Toast.makeText(ctx, message, Toast.LENGTH_LONG).show()
         }
       }
     }
