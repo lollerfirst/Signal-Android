@@ -77,8 +77,11 @@ fun MessageRecord.isViewOnceMessage(): Boolean =
 fun MessageRecord.hasExtraText(): Boolean {
   val hasTextSlide = isMms && (this as MmsMessageRecord).slideDeck.textSlide != null
   val hasOverflowText: Boolean = body.length > MAX_BODY_DISPLAY_LENGTH
+  
+  // Don't treat cashu tokens as extra text - they should be rendered inline as pills
+  val hasCashuToken = body.contains(Regex("cashu[AB]|cashu:", RegexOption.IGNORE_CASE))
 
-  return hasTextSlide || hasOverflowText
+  return (hasTextSlide || hasOverflowText) && !hasCashuToken
 }
 
 fun MessageRecord.hasQuote(): Boolean =
