@@ -20,11 +20,15 @@ import org.thoughtcrime.securesms.mms.Slide;
 import org.thoughtcrime.securesms.mms.StickerSlide;
 import org.thoughtcrime.securesms.util.MessageRecordUtil;
 import org.thoughtcrime.securesms.util.Util;
+import org.cashudevkit.Token;
+import org.cashudevkit.Amount;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 public final class ThreadBodyUtil {
 
@@ -46,6 +50,12 @@ public final class ThreadBodyUtil {
   }
 
   private static @NonNull ThreadBody getFormattedBodyForMms(@NonNull Context context, @NonNull MmsMessageRecord record, @Nullable CharSequence bodyOverride) {
+    // Check for cashu tokens first
+    ThreadBody cashuBody = getCashuTokenSummary(context, record);
+    if (cashuBody != null) {
+      return cashuBody;
+    }
+    
     if (record.getSharedContacts().size() > 0) {
       Contact contact = record.getSharedContacts().get(0);
 
@@ -94,6 +104,74 @@ public final class ThreadBodyUtil {
     } else {
       return getBody(context, record);
     }
+  }
+
+  private static @Nullable ThreadBody getCashuTokenSummary(@NonNull Context context, @NonNull MessageRecord messageRecord) {
+    // Check if message contains a cashu token
+    String body = messageRecord.getBody();
+    if (TextUtils.isEmpty(body)) {
+      return null;
+    }
+    
+    Pattern cashuPattern = Pattern.compile("(cashu:[^\\s]+|cashuA[^\\s]+|cashuB[^\\s]+)", Pattern.CASE_INSENSITIVE);
+    Matcher matcher = cashuPattern.matcher(body);
+    
+    if (!matcher.find()) {
+      return null;
+    }
+    
+    String token = matcher.group();
+    long sats = 0;
+    
+    // Try to decode the token to get the amount
+    try {
+      Token decoded = Token.Companion.decode(token);
+      Object amountObj = decoded.value();
+      if (amountObj instanceof Amount) {
+        Amount amount = (Amount) amountObj;
+        // Access the value field via reflection since it's a Kotlin property
+        try {
+          java.lang.reflect.Field valueField = Amount.class.getDeclaredField("value");
+          valueField.setAccessible(true);
+          Object valueObj = valueField.get(amount);
+          if (valueObj instanceof Number) {
+            sats = ((Number) valueObj).longValue();
+          }
+        } catch (Exception e) {
+          // Reflection failed, ignore
+        }
+      }
+      decoded.close();
+    } catch (Throwable e) {
+      Log.w(TAG, "Failed to decode cashu token for preview", e);
+    }
+    
+    // Format the summary message
+    String summary;
+    if (sats > 0) {
+      java.text.NumberFormat formatter = java.text.NumberFormat.getInstance();
+      formatter.setGroupingUsed(true);
+      formatter.setMaximumFractionDigits(0);
+      String formattedSats = formatter.format(sats);
+      
+      if (messageRecord.isOutgoing()) {
+        summary = context.getString(R.string.ThreadRecord_you_sent_sats, formattedSats);
+      } else {
+        summary = context.getString(R.string.ThreadRecord_sent_you_sats, 
+                                    messageRecord.getFromRecipient().getShortDisplayName(context), 
+                                    formattedSats);
+      }
+    } else {
+      // Fallback if we couldn't decode the amount
+      if (messageRecord.isOutgoing()) {
+        summary = context.getString(R.string.ThreadRecord_you_sent_ecash);
+      } else {
+        summary = context.getString(R.string.ThreadRecord_sent_you_ecash, 
+                                    messageRecord.getFromRecipient().getShortDisplayName(context));
+      }
+    }
+    
+    return new ThreadBody(summary);
   }
 
   private static @NonNull String getGiftSummary(@NonNull Context context, @NonNull MessageRecord messageRecord) {
