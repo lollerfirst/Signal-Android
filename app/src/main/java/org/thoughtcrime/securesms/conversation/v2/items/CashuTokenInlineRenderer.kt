@@ -140,13 +140,16 @@ object CashuTokenInlineRenderer {
   }
 
   private fun findToken(visibleText: String?, context: Context, conversationMessage: ConversationMessage): String? {
-    // Check all possible locations for a cashu token, prioritizing the full message body and text slide
-    // over the potentially truncated visible text
-    val bodyToken = extractTokenFromAny(conversationMessage.messageRecord.body)
+    // For large messages (>2000 chars), the TextSlide attachment contains the full message,
+    // while messageRecord.body is truncated. Check TextSlide first for complete token.
     val attachmentToken = extractTokenFromTextSlideIfPresent(context, conversationMessage)
+    if (attachmentToken != null) return attachmentToken
+    
+    // Fall back to body (for messages <2000 chars) and visible text
+    val bodyToken = extractTokenFromAny(conversationMessage.messageRecord.body)
     val visibleToken = extractTokenFromAny(visibleText)
     
-    return bodyToken ?: attachmentToken ?: visibleToken
+    return bodyToken ?: visibleToken
   }
 
   private fun createPill(context: Context, token: String, conversationMessage: ConversationMessage): PillBinding {
