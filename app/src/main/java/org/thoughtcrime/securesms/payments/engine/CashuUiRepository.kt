@@ -22,7 +22,12 @@ class CashuUiRepository(private val appContext: Context) {
     if (!SignalStore.payments.cashuEnabled()) return@withContext 0L
     // Each balance fetch also tries to mint any newly-paid quotes
     try { MintWatcher.checkOnce(appContext) } catch (_: Throwable) {}
-    runCatching { engine().getBalance().spendableSats }.getOrDefault(0L)
+    runCatching { 
+      engine().getBalance().spendableSats 
+    }.getOrElse { throwable ->
+      org.signal.core.util.logging.Log.w("CashuUiRepository", "Failed to get balance", throwable)
+      0L
+    }
   }
 
   fun getSpendableSatsBlocking(): Long = runBlocking { getSpendableSats() }
