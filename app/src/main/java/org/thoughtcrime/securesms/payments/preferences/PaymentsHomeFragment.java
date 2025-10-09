@@ -56,6 +56,11 @@ public class PaymentsHomeFragment extends LoggingFragment {
   private static final String TAG = Log.tag(PaymentsHomeFragment.class);
 
   private PaymentsHomeViewModel viewModel;
+  
+  // Button references for visibility control
+  private View addMoneyButton;
+  private View withdrawButton;
+  private View sendMoneyButton;
 
   // Cashu: simple sats formatter for header
   private String formatSats(long sats) {
@@ -110,6 +115,11 @@ public class PaymentsHomeFragment extends LoggingFragment {
     View                refresh          = view.findViewById(R.id.payments_home_fragment_header_refresh);
     LottieAnimationView refreshAnimation = view.findViewById(R.id.payments_home_fragment_header_refresh_animation);
     Stub<ComposeView>   bannerView       = ViewUtil.findStubById(view, R.id.banner_compose_view);
+    
+    // Store button references for visibility control
+    this.addMoneyButton = addMoney;
+    this.withdrawButton = withdraw;
+    this.sendMoneyButton = sendMoney;
 
     toolbar.setNavigationOnClickListener(v -> {
       viewModel.markAllPaymentsSeen();
@@ -239,11 +249,21 @@ public class PaymentsHomeFragment extends LoggingFragment {
     androidx.lifecycle.Observer<org.thoughtcrime.securesms.util.adapter.mapping.MappingModelList> listObserver = list -> {
       boolean ready = viewModel.isUiReady(list);
       overlay.setVisibility(ready ? View.GONE : View.VISIBLE);
+      // Hide buttons while loading or when payments disabled
+      updateButtonVisibility(ready);
     };
     viewModel.getList().observe(getViewLifecycleOwner(), listObserver);
     viewModel.getExchangeLoadState().observe(getViewLifecycleOwner(), loadState -> {
       boolean ready = viewModel.isUiReady(viewModel.getList().getValue());
       overlay.setVisibility(ready ? View.GONE : View.VISIBLE);
+      // Hide buttons while loading or when payments disabled
+      updateButtonVisibility(ready);
+    });
+    
+    // Also observe payment enabled state to hide buttons when disabled
+    viewModel.getPaymentsEnabled().observe(getViewLifecycleOwner(), enabled -> {
+      boolean ready = viewModel.isUiReady(viewModel.getList().getValue());
+      updateButtonVisibility(ready && enabled);
     });
 
     refresh.setOnClickListener(v -> { viewModel.refreshExchangeRates(true); if (viewModel.isCashuEnabled()) viewModel.updateStore(); });
@@ -345,6 +365,28 @@ public class PaymentsHomeFragment extends LoggingFragment {
     // Ensure Cashu recent activity refreshes after returning from Add Money or background
     if (viewModel != null && viewModel.isCashuEnabled()) {
       viewModel.updateStore();
+    }
+  }
+
+  /**
+   * Update button visibility based on loading state and payments enabled state.
+   * Buttons should be hidden when:
+   * - Still loading (ready = false)
+   * - Payments are disabled
+   */
+  private void updateButtonVisibility(boolean shouldShow) {
+    int visibility = shouldShow ? View.VISIBLE : View.GONE;
+    if (addMoneyButton != null) addMoneyButton.setVisibility(visibility);
+    if (withdrawButton != null) withdrawButton.setVisibility(visibility);
+    if (sendMoneyButton != null) sendMoneyButton.setVisibility(visibility);
+    
+    // Also hide the dividers between buttons
+    View root = getView();
+    if (root != null) {
+      View middle = root.findViewById(R.id.middle);
+      View middleRight = root.findViewById(R.id.middle_right);
+      if (middle != null) middle.setVisibility(visibility);
+      if (middleRight != null) middleRight.setVisibility(visibility);
     }
   }
 
