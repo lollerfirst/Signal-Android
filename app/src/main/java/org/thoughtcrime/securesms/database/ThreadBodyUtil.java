@@ -152,13 +152,16 @@ public final class ThreadBodyUtil {
     return new ThreadBody(summary);
   }
   
-  private static @Nullable String extractCashuToken(@Nullable String text) {
+  private static @Nullable String extractCashuToken(@Nullable CharSequence text) {
     if (TextUtils.isEmpty(text)) {
       return null;
     }
     
+    // Convert to string to handle CharSequence input
+    String textStr = text.toString();
+    
     Pattern cashuPattern = Pattern.compile("(cashu:[^\\s]+|cashuA[^\\s]+|cashuB[^\\s]+)", Pattern.CASE_INSENSITIVE);
-    Matcher matcher = cashuPattern.matcher(text);
+    Matcher matcher = cashuPattern.matcher(textStr);
     
     if (matcher.find()) {
       return matcher.group();
