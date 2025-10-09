@@ -20,7 +20,7 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/cashu_payment_amount_layout"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
         android:minWidth="160dp"
@@ -30,7 +30,6 @@
         android:paddingEnd="14dp"
         android:paddingBottom="18dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="@id/cashu_payment_receive_container"
         app:layout_constraintTop_toBottomOf="@id/cashu_payment_direction">
 
         <TextView

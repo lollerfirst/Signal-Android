@@ -197,7 +197,11 @@ object CashuTokenInlineRenderer {
         val result = withContext(Dispatchers.IO) { engine.importToken(token) }
         result.onSuccess { received ->
           val peer = conversationMessage.messageRecord.fromRecipient
-          val memo = "Received from|rid:" + peer.id.serialize() + "|name:" + peer.getDisplayName(ctx).replace("|", "｜")
+          val memo = if (pillBinding.outgoing) {
+            "Reclaimed|rid:" + peer.id.serialize() + "|name:" + peer.getDisplayName(ctx).replace("|", "｜")
+          } else {
+            "Received from|rid:" + peer.id.serialize() + "|name:" + peer.getDisplayName(ctx).replace("|", "｜")
+          }
           try {
             CashuReceiveStore(ctx).add(
               CashuReceiveStore.Received(null, received.addedSats, System.currentTimeMillis(), memo)
