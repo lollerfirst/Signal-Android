@@ -113,20 +113,36 @@ public final class ThreadBodyUtil {
   }
 
   private static @Nullable ThreadBody getCashuTokenSummary(@NonNull Context context, @NonNull MessageRecord messageRecord) {
-    // Check if message contains a cashu token
-    String body = messageRecord.getBody();
-    if (TextUtils.isEmpty(body)) {
+    String token = null;
+    
+    // For large messages (>2000 chars), the TextSlide attachment contains the full message
+    // Check TextSlide first to get complete token
+    if (messageRecord.isMms()) {
+      MmsMessageRecord mmsRecord = (MmsMessageRecord) messageRecord;
+      try {
+        if (mmsRecord.getSlideDeck().getTextSlide() != null && mmsRecord.getSlideDeck().getTextSlide().getUri() != null) {
+          android.net.Uri textSlideUri = mmsRecord.getSlideDeck().getTextSlide().getUri();
+          java.io.InputStream input = org.thoughtcrime.securesms.mms.PartAuthority.getAttachmentStream(context, textSlideUri);
+          if (input != null) {
+            String fullText = org.signal.core.util.StreamUtil.readFullyAsString(input);
+            input.close();
+            token = extractCashuToken(fullText);
+          }
+        }
+      } catch (Throwable e) {
+        // Ignore and fall back to body
+      }
+    }
+    
+    // Fall back to checking the message body (for messages <2000 chars)
+    if (token == null) {
+      token = extractCashuToken(messageRecord.getBody());
+    }
+    
+    if (token == null) {
       return null;
     }
     
-    Pattern cashuPattern = Pattern.compile("(cashu:[^\\s]+|cashuA[^\\s]+|cashuB[^\\s]+)", Pattern.CASE_INSENSITIVE);
-    Matcher matcher = cashuPattern.matcher(body);
-    
-    if (!matcher.find()) {
-      return null;
-    }
-    
-    String token = matcher.group();
     long sats = 0;
     
     // Try to decode the token to get the amount
@@ -186,6 +202,21 @@ public final class ThreadBodyUtil {
     }
     
     return new ThreadBody(summary);
+  }
+  
+  private static @Nullable String extractCashuToken(@Nullable String text) {
+    if (TextUtils.isEmpty(text)) {
+      return null;
+    }
+    
+    Pattern cashuPattern = Pattern.compile("(cashu:[^\\s]+|cashuA[^\\s]+|cashuB[^\\s]+)", Pattern.CASE_INSENSITIVE);
+    Matcher matcher = cashuPattern.matcher(text);
+    
+    if (matcher.find()) {
+      return matcher.group();
+    }
+    
+    return null;
   }
 
   private static @NonNull String getGiftSummary(@NonNull Context context, @NonNull MessageRecord messageRecord) {
