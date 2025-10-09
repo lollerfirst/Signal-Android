@@ -17,6 +17,6 @@
     <!-- Cashu thread preview -->
     <string name="ThreadRecord_you_sent_sats">You sent %1$s sat</string>
     <string name="ThreadRecord_sent_you_sats">%1$s sent you %2$s sat</string>
-    <string name="ThreadRecord_you_sent_ecash">You sent ecash</string>
-    <string name="ThreadRecord_sent_you_ecash">%1$s sent you ecash</string>
+    <string name="ThreadRecord_you_sent_ecash">You sent ₿</string>
+    <string name="ThreadRecord_sent_you_ecash">%1$s sent you ₿</string>
 </resources>
