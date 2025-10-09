@@ -38,6 +38,12 @@ public final class ThreadBodyUtil {
   }
 
   public static @NonNull ThreadBody getFormattedBodyFor(@NonNull Context context, @NonNull MessageRecord record) {
+    // Check for cashu tokens first (works for both SMS and MMS)
+    ThreadBody cashuBody = getCashuTokenSummary(context, record);
+    if (cashuBody != null) {
+      return cashuBody;
+    }
+    
     if (record.isMms()) {
       return getFormattedBodyForMms(context, (MmsMessageRecord) record, null);
     }
