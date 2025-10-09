@@ -20,15 +20,17 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/cashu_payment_amount_layout"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
+        android:minWidth="160dp"
         android:background="@drawable/rounded_rectangle_secondary_18"
         android:paddingStart="20dp"
         android:paddingTop="18dp"
         android:paddingEnd="14dp"
         android:paddingBottom="18dp"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/cashu_payment_receive_container"
         app:layout_constraintTop_toBottomOf="@id/cashu_payment_direction">
 
         <TextView
@@ -58,11 +60,11 @@
 
     <FrameLayout
         android:id="@+id/cashu_payment_receive_container"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:minWidth="160dp"
         android:layout_marginTop="8dp"
-        app:layout_constraintEnd_toEndOf="@id/cashu_payment_amount_layout"
-        app:layout_constraintStart_toStartOf="@id/cashu_payment_amount_layout"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/cashu_payment_amount_layout">
 
         <com.google.android.material.button.MaterialButton
@@ -70,6 +72,7 @@
             style="@style/Widget.Signal.Button.Small"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:minWidth="160dp"
             android:insetBottom="0dp"
             android:insetLeft="0dp"
             android:insetRight="0dp"
