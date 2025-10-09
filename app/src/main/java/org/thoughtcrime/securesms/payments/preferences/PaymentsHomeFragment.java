@@ -61,6 +61,8 @@ public class PaymentsHomeFragment extends LoggingFragment {
   private View addMoneyButton;
   private View withdrawButton;
   private View sendMoneyButton;
+  private View refreshButton;
+  private View mintButton;
 
   // Cashu: simple sats formatter for header
   private String formatSats(long sats) {
@@ -113,6 +115,8 @@ public class PaymentsHomeFragment extends LoggingFragment {
     View                withdraw         = view.findViewById(R.id.button_center_frame);
     View                sendMoney        = view.findViewById(R.id.button_end_frame);
     View                refresh          = view.findViewById(R.id.payments_home_fragment_header_refresh);
+    View                refreshContainer = view.findViewById(R.id.payments_home_fragment_header_refresh_container);
+    View                mint             = view.findViewById(R.id.payments_home_fragment_header_mint);
     LottieAnimationView refreshAnimation = view.findViewById(R.id.payments_home_fragment_header_refresh_animation);
     Stub<ComposeView>   bannerView       = ViewUtil.findStubById(view, R.id.banner_compose_view);
     
@@ -120,6 +124,8 @@ public class PaymentsHomeFragment extends LoggingFragment {
     this.addMoneyButton = addMoney;
     this.withdrawButton = withdraw;
     this.sendMoneyButton = sendMoney;
+    this.refreshButton = refreshContainer;
+    this.mintButton = mint;
 
     toolbar.setNavigationOnClickListener(v -> {
       viewModel.markAllPaymentsSeen();
@@ -379,6 +385,8 @@ public class PaymentsHomeFragment extends LoggingFragment {
     if (addMoneyButton != null) addMoneyButton.setVisibility(visibility);
     if (withdrawButton != null) withdrawButton.setVisibility(visibility);
     if (sendMoneyButton != null) sendMoneyButton.setVisibility(visibility);
+    if (refreshButton != null) refreshButton.setVisibility(visibility);
+    if (mintButton != null) mintButton.setVisibility(visibility);
     
     // Also hide the dividers between buttons
     View root = getView();
