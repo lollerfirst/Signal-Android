@@ -63,12 +63,11 @@ object CashuTokenInlineRenderer {
 
   private fun extractTokenFromAny(text: String?): String? {
     if (text.isNullOrEmpty()) return null
-    val candidate = text.split(Regex("\\s+")).firstOrNull { part ->
-      part.startsWith("cashu:", ignoreCase = true) ||
-      part.startsWith("cashuA", ignoreCase = true) ||
-      part.startsWith("cashuB", ignoreCase = true)
-    }
-    return candidate
+    // Match the entire cashu token - they are continuous base64-like strings without whitespace
+    // Pattern matches: cashu: followed by non-whitespace, or cashuA/cashuB followed by non-whitespace
+    val pattern = Regex("(cashu:[^\\s]+|cashuA[^\\s]+|cashuB[^\\s]+)", RegexOption.IGNORE_CASE)
+    val match = pattern.find(text)
+    return match?.value
   }
 
   private fun extractTokenFromTextSlideIfPresent(context: Context, conversationMessage: ConversationMessage): String? {
