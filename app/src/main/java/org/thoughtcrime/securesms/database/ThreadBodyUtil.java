@@ -126,19 +126,27 @@ public final class ThreadBodyUtil {
     // Try to decode the token to get the amount
     try {
       Token decoded = Token.Companion.decode(token);
-      Object amountObj = decoded.value();
-      if (amountObj instanceof Amount) {
-        Amount amount = (Amount) amountObj;
-        // Access the value field via reflection since it's a Kotlin property
+      Amount amount = decoded.value();
+      if (amount != null) {
+        // Access value via reflection (Kotlin property with private backing field)
         try {
-          java.lang.reflect.Field valueField = Amount.class.getDeclaredField("value");
-          valueField.setAccessible(true);
-          Object valueObj = valueField.get(amount);
-          if (valueObj instanceof Number) {
-            sats = ((Number) valueObj).longValue();
+          java.lang.reflect.Method getValueMethod = Amount.class.getMethod("getValue");
+          Object valueObj = getValueMethod.invoke(amount);
+          if (valueObj instanceof java.math.BigInteger) {
+            sats = ((java.math.BigInteger) valueObj).longValue();
           }
         } catch (Exception e) {
-          // Reflection failed, ignore
+          // If method doesn't exist, try field access
+          try {
+            java.lang.reflect.Field valueField = Amount.class.getDeclaredField("value");
+            valueField.setAccessible(true);
+            Object valueObj = valueField.get(amount);
+            if (valueObj instanceof java.math.BigInteger) {
+              sats = ((java.math.BigInteger) valueObj).longValue();
+            }
+          } catch (Exception ex) {
+            // Failed to get value
+          }
         }
       }
       decoded.close();
