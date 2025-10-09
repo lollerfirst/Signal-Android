@@ -164,7 +164,7 @@ object CashuTokenInlineRenderer {
     val amountText = if (meta.sats != null && meta.sats > 0) {
       val formatter = java.text.NumberFormat.getInstance()
       formatter.maximumFractionDigits = 0
-      formatter.format(meta.sats).let { "₿ $it sat" }
+      formatter.format(meta.sats).let { "₿ $it" }
     } else {
       context.getString(R.string.cashu_token_label)
     }
@@ -225,17 +225,17 @@ object CashuTokenInlineRenderer {
     val index = parent.indexOfChild(anchor)
     val baseLp = anchor.layoutParams
     val newLp = when (baseLp) {
-      is ConstraintLayout.LayoutParams -> ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT, ConstraintLayout.LayoutParams.WRAP_CONTENT).apply {
+      is ConstraintLayout.LayoutParams -> ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_PARENT, ConstraintLayout.LayoutParams.WRAP_CONTENT).apply {
         leftToLeft = baseLp.leftToLeft
         rightToRight = baseLp.rightToRight
         topToTop = baseLp.topToTop
         bottomToBottom = baseLp.bottomToBottom
         setMargins(baseLp.leftMargin, baseLp.topMargin, baseLp.rightMargin, baseLp.bottomMargin)
       }
-      is ViewGroup.MarginLayoutParams -> ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+      is ViewGroup.MarginLayoutParams -> ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
         setMargins(baseLp.leftMargin, baseLp.topMargin, baseLp.rightMargin, baseLp.bottomMargin)
       }
-      else -> ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+      else -> ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
     }
     parent.addView(pill, if (index >= 0) index else parent.childCount, newLp)
   }
