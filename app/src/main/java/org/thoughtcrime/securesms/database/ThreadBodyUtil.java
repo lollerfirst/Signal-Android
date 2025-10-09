@@ -20,9 +20,6 @@ import org.thoughtcrime.securesms.mms.Slide;
 import org.thoughtcrime.securesms.mms.StickerSlide;
 import org.thoughtcrime.securesms.util.MessageRecordUtil;
 import org.thoughtcrime.securesms.util.Util;
-import org.cashudevkit.Token;
-import org.cashudevkit.Amount;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -113,10 +110,10 @@ public final class ThreadBodyUtil {
   }
 
   private static @Nullable ThreadBody getCashuTokenSummary(@NonNull Context context, @NonNull MessageRecord messageRecord) {
-    String token = null;
+    boolean hasToken = false;
     
     // For large messages (>2000 chars), the TextSlide attachment contains the full message
-    // Check TextSlide first to get complete token
+    // Check TextSlide first to detect complete token
     if (messageRecord.isMms()) {
       MmsMessageRecord mmsRecord = (MmsMessageRecord) messageRecord;
       try {
@@ -126,7 +123,7 @@ public final class ThreadBodyUtil {
           if (input != null) {
             String fullText = org.signal.core.util.StreamUtil.readFullyAsString(input);
             input.close();
-            token = extractCashuToken(fullText);
+            hasToken = extractCashuToken(fullText) != null;
           }
         }
       } catch (Throwable e) {
@@ -135,70 +132,21 @@ public final class ThreadBodyUtil {
     }
     
     // Fall back to checking the message body (for messages <2000 chars)
-    if (token == null) {
-      token = extractCashuToken(messageRecord.getBody());
+    if (!hasToken) {
+      hasToken = extractCashuToken(messageRecord.getBody()) != null;
     }
     
-    if (token == null) {
+    if (!hasToken) {
       return null;
     }
     
-    long sats = 0;
-    
-    // Try to decode the token to get the amount
-    try {
-      Token decoded = Token.Companion.decode(token);
-      Amount amount = decoded.value();
-      if (amount != null) {
-        // Access value via reflection (Kotlin property with private backing field)
-        try {
-          java.lang.reflect.Method getValueMethod = Amount.class.getMethod("getValue");
-          Object valueObj = getValueMethod.invoke(amount);
-          if (valueObj instanceof java.math.BigInteger) {
-            sats = ((java.math.BigInteger) valueObj).longValue();
-          }
-        } catch (Exception e) {
-          // If method doesn't exist, try field access
-          try {
-            java.lang.reflect.Field valueField = Amount.class.getDeclaredField("value");
-            valueField.setAccessible(true);
-            Object valueObj = valueField.get(amount);
-            if (valueObj instanceof java.math.BigInteger) {
-              sats = ((java.math.BigInteger) valueObj).longValue();
-            }
-          } catch (Exception ex) {
-            // Failed to get value
-          }
-        }
-      }
-      decoded.close();
-    } catch (Throwable e) {
-      Log.w(TAG, "Failed to decode cashu token for preview", e);
-    }
-    
-    // Format the summary message
+    // Format the summary message (no amount - privacy)
     String summary;
-    if (sats > 0) {
-      java.text.NumberFormat formatter = java.text.NumberFormat.getInstance();
-      formatter.setGroupingUsed(true);
-      formatter.setMaximumFractionDigits(0);
-      String formattedSats = formatter.format(sats);
-      
-      if (messageRecord.isOutgoing()) {
-        summary = context.getString(R.string.ThreadRecord_you_sent_sats, formattedSats);
-      } else {
-        summary = context.getString(R.string.ThreadRecord_sent_you_sats, 
-                                    messageRecord.getFromRecipient().getShortDisplayName(context), 
-                                    formattedSats);
-      }
+    if (messageRecord.isOutgoing()) {
+      summary = context.getString(R.string.ThreadRecord_you_sent_ecash);
     } else {
-      // Fallback if we couldn't decode the amount
-      if (messageRecord.isOutgoing()) {
-        summary = context.getString(R.string.ThreadRecord_you_sent_ecash);
-      } else {
-        summary = context.getString(R.string.ThreadRecord_sent_you_ecash, 
-                                    messageRecord.getFromRecipient().getShortDisplayName(context));
-      }
+      summary = context.getString(R.string.ThreadRecord_sent_you_ecash, 
+                                  messageRecord.getFromRecipient().getShortDisplayName(context));
     }
     
     return new ThreadBody(summary);
