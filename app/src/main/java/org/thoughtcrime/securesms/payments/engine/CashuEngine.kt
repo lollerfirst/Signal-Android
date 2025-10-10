@@ -85,6 +85,13 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
 
       currentMintUrl = mintUrl
       initialized = true
+      
+      // After successful initialization, clean up legacy MobileCoin entropy
+      try {
+        SignalStore.payments.cleanupLegacyEntropyAfterCashuMigration()
+      } catch (e: Throwable) {
+        Log.w(TAG, "Failed to cleanup legacy entropy", e)
+      }
     } catch (e: Throwable) {
       Log.w(TAG, "Failed to init CashuEngine for $mintUrl", e)
       throw e

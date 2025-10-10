@@ -4137,7 +4137,7 @@
 
     <!-- Displayed on a welcome screen for payments -->
     <string name="PaymentsHomeFragment_introducing_payments">Introducing payments</string>
-    <string name="PaymentsHomeFragment__use_signal_to_send_and_receive">Use Signal to send and receive MobileCoin, a new privacy focused digital currency. Activate to get started.</string>
+    <string name="PaymentsHomeFragment__use_signal_to_send_and_receive">Use Signal to send and receive Bitcoin, using a new privacy focused technology called Cashu. Activate to get started.</string>
     <string name="PaymentsHomeFragment__activate_payments">Activate Payments</string>
     <string name="PaymentsHomeFragment__activating_payments">Activating payments…</string>
     <string name="PaymentsHomeFragment__restore_payments_account">Restore payments account</string>
@@ -4171,7 +4171,7 @@
     <string name="PaymentsHomeFragment__payments_deactivated">Payments deactivated.</string>
     <string name="PaymentsHomeFragment__payment_failed">Payment failed</string>
     <string name="PaymentsHomeFragment__details">Details</string>
-    <string name="PaymentsHomeFragment__learn_more__activate_payments" translatable="false">https://support.signal.org/hc/articles/360057625692#payments_activate</string>
+    <string name="PaymentsHomeFragment__learn_more__activate_payments" translatable="false">https://cashu.space</string>
     <!-- Displayed as a description in a dialog when the user tries to activate payments -->
     <string name="PaymentsHomeFragment__you_can_use_signal_to_send_and">You can use Signal to send and receive MobileCoin. All payments are subject to the Terms of Use for MobileCoins and the MobileCoin Wallet. You may encounter some issues and payments or balances you may lose can\'t be recovered. </string>
     <string name="PaymentsHomeFragment__activate">Activate</string>
@@ -5236,12 +5236,12 @@
     <string name="WallpaperCropActivity__blur_photo">Blur photo</string>
 
     <!-- InfoCard -->
-    <string name="payment_info_card_about_mobilecoin">About MobileCoin</string>
-    <string name="payment_info_card_mobilecoin_is_a_new_privacy_focused_digital_currency">MobileCoin is a new privacy focused digital currency.</string>
+    <string name="payment_info_card_about_mobilecoin">About Cashu</string>
+    <string name="payment_info_card_mobilecoin_is_a_new_privacy_focused_digital_currency">Cashu is a new privacy focused technology for Bitcoin.</string>
     <string name="payment_info_card_adding_funds">Adding funds</string>
-    <string name="payment_info_card_you_can_add_funds_for_use_in">You can add funds for use in Signal by sending MobileCoin to your wallet address.</string>
+    <string name="payment_info_card_you_can_add_funds_for_use_in">You can add funds by paying a Lightning invoice to top up your balance with Bitcoin.</string>
     <string name="payment_info_card_cashing_out">Cashing out</string>
-    <string name="payment_info_card_you_can_cash_out_mobilecoin">You can cash out MobileCoin anytime on an exchange that supports MobileCoin. Just make a transfer to your account at that exchange.</string>
+    <string name="payment_info_card_you_can_cash_out_mobilecoin">You can withdraw Bitcoin anytime by paying a Lightning invoice. Just paste a Lightning invoice or scan a QR code to get started.</string>
     <string name="payment_info_card_hide_this_card">Hide this card?</string>
     <string name="payment_info_card_hide">Hide</string>
     <!-- Title of save recovery phrase card -->
@@ -5253,9 +5253,9 @@
     <string name="payment_info_card_with_a_high_balance">With a high balance, you may want to update to an alphanumeric PIN to add more protection to your account.</string>
     <string name="payment_info_card_update_pin">Update PIN</string>
 
-    <string name="payment_info_card__learn_more__about_mobilecoin" translatable="false">https://support.signal.org/hc/articles/360057625692#payments_which_ones</string>
-    <string name="payment_info_card__learn_more__adding_to_your_wallet" translatable="false">https://support.signal.org/hc/articles/360057625692#payments_transfer_from_exchange</string>
-    <string name="payment_info_card__learn_more__cashing_out" translatable="false">https://support.signal.org/hc/articles/360057625692#payments_transfer_to_exchange</string>
+    <string name="payment_info_card__learn_more__about_mobilecoin" translatable="false">https://cashu.space</string>
+    <string name="payment_info_card__learn_more__adding_to_your_wallet" translatable="false">https://cashu.space</string>
+    <string name="payment_info_card__learn_more__cashing_out" translatable="false">https://cashu.space</string>
 
     <!-- DeactivateWalletFragment -->
     <string name="DeactivateWalletFragment__deactivate_wallet">Deactivate Wallet</string>

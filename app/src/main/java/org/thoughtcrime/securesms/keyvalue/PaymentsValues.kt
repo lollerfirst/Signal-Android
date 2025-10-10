@@ -201,9 +201,32 @@ class PaymentsValues internal constructor(store: KeyValueStore) : SignalStoreVal
 
   val paymentsMnemonic: Mnemonic
     get() {
+      // If Cashu is enabled, retrieve mnemonic from encrypted Cashu storage
+      if (cashuEnabled()) {
+        return getCashuMnemonic()
+      }
+      
+      // Legacy MobileCoin path: use SharedPreferences entropy
       val paymentsEntropy = paymentsEntropy ?: throw IllegalStateException("Entropy has not been set")
       return paymentsEntropy.asMnemonic()
     }
+  
+  /**
+   * Get Cashu mnemonic from encrypted storage.
+   * This is used for displaying the recovery phrase to users.
+   */
+  private fun getCashuMnemonic(): Mnemonic {
+    try {
+      val context = org.thoughtcrime.securesms.dependencies.AppDependencies.application
+      val mnemonicManager = org.thoughtcrime.securesms.payments.engine.CashuMnemonicManager(context)
+      val mnemonicString = mnemonicManager.getMnemonicOrNull() 
+        ?: throw IllegalStateException("Cashu mnemonic has not been created yet")
+      return Mnemonic(mnemonicString)
+    } catch (e: Throwable) {
+      Log.e(TAG, "Failed to load Cashu mnemonic", e)
+      throw IllegalStateException("Could not retrieve Cashu mnemonic", e)
+    }
+  }
   @WorkerThread
   fun setCashuEnabled(enabled: Boolean) {
     if (cashuEnabled() == enabled) return
@@ -212,6 +235,35 @@ class PaymentsValues internal constructor(store: KeyValueStore) : SignalStoreVal
       .commit()
     SignalDatabase.recipients.markNeedsSync(Recipient.self().id)
     StorageSyncHelper.scheduleSyncForDataChange()
+  }
+  
+  /**
+   * Clean up legacy MobileCoin entropy after successful Cashu migration.
+   * This should be called after the Cashu wallet has been initialized and mnemonic migrated.
+   */
+  @WorkerThread
+  fun cleanupLegacyEntropyAfterCashuMigration() {
+    if (!cashuEnabled()) {
+      return  // Only clean up when Cashu is enabled
+    }
+    
+    try {
+      val context = org.thoughtcrime.securesms.dependencies.AppDependencies.application
+      val cashuWalletFile = java.io.File(context.filesDir, "cashu_wallet.json")
+      
+      // Only remove if Cashu wallet file exists (migration complete)
+      if (cashuWalletFile.exists()) {
+        val hadEntropy = paymentsEntropy != null
+        if (hadEntropy) {
+          Log.i(TAG, "Removing legacy MobileCoin entropy after Cashu migration")
+          store.beginWrite()
+            .remove(PAYMENTS_ENTROPY)
+            .commit()
+        }
+      }
+    } catch (e: Throwable) {
+      Log.w(TAG, "Failed to cleanup legacy entropy", e)
+    }
   }
 
 

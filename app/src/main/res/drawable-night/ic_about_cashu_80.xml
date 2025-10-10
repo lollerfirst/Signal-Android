@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Outer circle background (darker for night mode) -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#2e3338"/>
+            <size android:width="80dp" android:height="80dp"/>
+        </shape>
+    </item>
+    
+    <!-- Inner circle background -->
+    <item android:top="8dp" android:bottom="8dp" android:left="8dp" android:right="8dp">
+        <shape android:shape="oval">
+            <solid android:color="#FFFFFF"/>
+        </shape>
+    </item>
+    
+    <!-- Cashu logo centered -->
+    <item android:top="16dp" android:bottom="16dp" android:left="16dp" android:right="16dp">
+        <bitmap 
+            android:src="@drawable/cashu_logo"
+            android:gravity="center"/>
+    </item>
+</layer-list>
