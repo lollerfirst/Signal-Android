@@ -5,7 +5,6 @@ import org.cashudevkit.generateMnemonic
 import org.json.JSONObject
 import org.signal.core.util.logging.Log
 import org.thoughtcrime.securesms.crypto.KeyStoreHelper
-import org.thoughtcrime.securesms.keyvalue.SignalStore
 import java.io.File
 
 /**
@@ -27,8 +26,11 @@ class CashuMnemonicManager(private val appContext: Context) {
    * 
    * Priority:
    * 1. Load existing encrypted Cashu mnemonic if exists
-   * 2. Migrate from MobileCoin SharedPreferences if available (one-time migration)
-   * 3. Generate new CDK mnemonic using generateMnemonic()
+   * 2. Generate new CDK mnemonic using generateMnemonic()
+   * 
+   * IMPORTANT: MobileCoin and Cashu use DIFFERENT key derivation schemes.
+   * A MobileCoin mnemonic CANNOT be used to restore Cashu funds!
+   * They must remain separate. Fund migration should be handled separately.
    */
   fun getOrCreateMnemonic(): String {
     // If we already have a Cashu mnemonic, load it
@@ -37,16 +39,7 @@ class CashuMnemonicManager(private val appContext: Context) {
       return load()
     }
     
-    // Try to migrate from MobileCoin SharedPreferences (for existing users)
-    val migratedMnemonic = tryMigrateFromMobileCoin()
-    if (migratedMnemonic != null) {
-      Log.i(TAG, "Successfully migrated MobileCoin mnemonic to Cashu encrypted storage")
-      val sealed = KeyStoreHelper.seal(migratedMnemonic.toByteArray())
-      write(SealedMnemonic(sealed = sealed.serialize()))
-      return migratedMnemonic
-    }
-    
-    // Generate new CDK mnemonic (no MobileCoin dependencies!)
+    // Generate new CDK mnemonic (completely independent from MobileCoin)
     Log.i(TAG, "Generating new Cashu wallet mnemonic using CDK")
     val mnemonic = generateMnemonic()
     
@@ -69,28 +62,6 @@ class CashuMnemonicManager(private val appContext: Context) {
         null
       }
     } else {
-      null
-    }
-  }
-
-  /**
-   * Try to migrate existing MobileCoin entropy from SharedPreferences.
-   * Returns the mnemonic string if migration is possible, null otherwise.
-   */
-  private fun tryMigrateFromMobileCoin(): String? {
-    return try {
-      val paymentsEntropy = SignalStore.payments.paymentsEntropy
-      if (paymentsEntropy != null) {
-        Log.i(TAG, "Found existing MobileCoin entropy, migrating to Cashu")
-        // Convert MobileCoin entropy to mnemonic using their library
-        // This ensures existing users don't lose their wallets
-        val mnemonic = paymentsEntropy.asMnemonic().mnemonic
-        mnemonic
-      } else {
-        null
-      }
-    } catch (e: Throwable) {
-      Log.w(TAG, "Could not migrate MobileCoin entropy", e)
       null
     }
   }
