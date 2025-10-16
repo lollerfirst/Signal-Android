@@ -162,8 +162,11 @@ public class CreatePaymentFragment extends LoggingFragment {
     viewModel.getNote().observe(getViewLifecycleOwner(), this::updateNote);
     viewModel.getSpendableBalance().observe(getViewLifecycleOwner(), mob -> {
       if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
-        long satsAvailable = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext()).getSpendableSatsBlocking();
-        this.balance.setText("Available: " + formatSats(satsAvailable) + " sat");
+        // Use LiveData to avoid blocking main thread
+        org.thoughtcrime.securesms.payments.engine.CashuUiRepository repo = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext());
+        repo.getSpendableSatsLiveData().observe(getViewLifecycleOwner(), satsAvailable -> {
+          this.balance.setText("Available: " + formatSats(satsAvailable) + " sat");
+        });
       } else {
         this.updateBalance(mob);
       }
@@ -266,7 +269,15 @@ public class CreatePaymentFragment extends LoggingFragment {
       case MONEY:
         if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
           long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(inputState.getMoneyAmount());
-          String fiatText = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext()).satsToFiatStringBlocking(sats);
+          // Use cached value to avoid blocking - LiveData will update asynchronously
+          org.thoughtcrime.securesms.payments.engine.CashuUiRepository repo = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext());
+          String fiatText = repo.satsToFiatStringCached(sats);
+          // Trigger async update in background
+          repo.satsToFiatStringLiveData(sats).observe(getViewLifecycleOwner(), updatedFiat -> {
+            exchange.setText(updatedFiat);
+            exchange.append(org.thoughtcrime.securesms.util.SpanUtil.buildImageSpan(spacer));
+            exchange.append(org.thoughtcrime.securesms.util.SpanUtil.buildImageSpan(infoIcon));
+          });
           exchange.setVisibility(View.VISIBLE);
           exchange.setText(fiatText);
           exchange.append(org.thoughtcrime.securesms.util.SpanUtil.buildImageSpan(spacer));
@@ -324,15 +335,30 @@ public class CreatePaymentFragment extends LoggingFragment {
   }
 
   private void renderCashu(@NonNull InputState inputState) {
+    long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(inputState.getMoneyAmount());
+    org.thoughtcrime.securesms.payments.engine.CashuUiRepository repo = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext());
+    String fiatText = repo.satsToFiatStringCached(sats);
+    
+    // Trigger async update in background
+    repo.satsToFiatStringLiveData(sats).observe(getViewLifecycleOwner(), updatedFiat -> {
+      // Update the exchange text when fiat value is fetched
+      if (cashuFiatPrimary) {
+        exchange.setText(updatedFiat);
+        exchange.append(org.thoughtcrime.securesms.util.SpanUtil.buildImageSpan(spacer));
+        exchange.append(org.thoughtcrime.securesms.util.SpanUtil.buildImageSpan(infoIcon));
+      } else {
+        exchange.setText(updatedFiat);
+        exchange.append(org.thoughtcrime.securesms.util.SpanUtil.buildImageSpan(spacer));
+        exchange.append(org.thoughtcrime.securesms.util.SpanUtil.buildImageSpan(infoIcon));
+      }
+    });
+    
     // cashuFiatPrimary determines which label (amount/exchange) is large vs small
     if (cashuFiatPrimary) {
       // Primary is fiat, secondary is sats
       fiatConstraintSet.applyTo(constraintLayout);
       amount.setTextColor(ContextCompat.getColor(requireContext(), R.color.signal_text_secondary));
       exchange.setTextColor(ContextCompat.getColor(requireContext(), R.color.signal_text_primary));
-
-      long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(inputState.getMoneyAmount());
-      String fiatText = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext()).satsToFiatStringBlocking(sats);
 
       // Large label (exchange) shows fiat with info icon
       exchange.setVisibility(View.VISIBLE);
@@ -348,9 +374,6 @@ public class CreatePaymentFragment extends LoggingFragment {
       cryptoConstraintSet.applyTo(constraintLayout);
       exchange.setTextColor(ContextCompat.getColor(requireContext(), R.color.signal_text_secondary));
       amount.setTextColor(ContextCompat.getColor(requireContext(), R.color.signal_text_primary));
-
-      long sats = org.thoughtcrime.securesms.payments.create.CashuAmountAccessor.getAmountSats(inputState.getMoneyAmount());
-      String fiatText = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext()).satsToFiatStringBlocking(sats);
 
       // Large label (amount) shows sats
       amount.setText(formatSats(sats) + " sat");
