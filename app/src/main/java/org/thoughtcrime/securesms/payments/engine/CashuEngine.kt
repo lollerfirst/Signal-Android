@@ -2,6 +2,11 @@ package org.thoughtcrime.securesms.payments.engine
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.cashudevkit.Amount
 import org.cashudevkit.CurrencyUnit
@@ -29,6 +34,7 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
     private val TAG = Log.tag(CashuEngine::class.java)
     private const val DEFAULT_MINT_URL = "https://mint.chorus.community"
     private const val DB_NAME = "cashu-wallet.db"
+    private const val CLEANUP_DELAY_MS = 2000L // Give operations 2 seconds to complete
   }
 
   private val keyManager by lazy { CashuKeyManager(appContext) }
@@ -40,10 +46,13 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
   // Track which mint a given melt quote (or invoice) was created against, so we can melt on the same mint
   private val meltQuoteMintCache: java.util.concurrent.ConcurrentHashMap<String, String> = java.util.concurrent.ConcurrentHashMap()
 
-  private var db: WalletSqliteDatabase? = null
-  private var wallet: Wallet? = null
-  private var initialized: Boolean = false
-  private var currentMintUrl: String? = null
+  // Synchronization for thread-safe initialization
+  private val initLock = Mutex()
+  
+  @Volatile private var db: WalletSqliteDatabase? = null
+  @Volatile private var wallet: Wallet? = null
+  @Volatile private var initialized: Boolean = false
+  @Volatile private var currentMintUrl: String? = null
 
   private suspend fun ensureInitialized(): Unit = withContext(Dispatchers.IO) {
     val activeMint = try { SignalStore.payments.getActiveMint() } catch (_: Throwable) { DEFAULT_MINT_URL }
@@ -51,50 +60,73 @@ class CashuEngine(private val appContext: Context) : PaymentsEngine {
   }
 
   private suspend fun ensureInitializedForMint(mintUrl: String) = withContext(Dispatchers.IO) {
-    if (initialized && wallet != null && currentMintUrl == mintUrl) {
-      return@withContext
-    }
-
-    try {
-      // Tear down any existing state
-      runCatching { wallet?.close() }
-      runCatching { db?.close() }
-
-      // Open database
-      val dbPath = appContext.filesDir.resolve(DB_NAME).absolutePath
-      db = WalletSqliteDatabase(dbPath)
-
-      // Create wallet
-      val mnemonic = mnemonicManager.getOrCreateMnemonic()
-      val config = WalletConfig(targetProofCount = 10u)
-
-      wallet = Wallet(
-        mintUrl = mintUrl,
-        unit = CurrencyUnit.Sat,
-        mnemonic = mnemonic,
-        db = db!!,
-        config = config
-      )
-
-      // Best-effort priming
-      runCatching { wallet!!.refreshKeysets() }.onFailure { Log.w(TAG, "refreshKeysets failed during init", it) }
-      runCatching { wallet!!.getMintInfo() }.onFailure { Log.w(TAG, "getMintInfo failed during init", it) }
-
-      val p2pk = keyManager.getOrCreateP2pk()
-      Log.i(TAG, "Cashu wallet initialized for $mintUrl. P2PK pub=${'$'}{p2pk.pubkeyHex.take(16)}…")
-
-      currentMintUrl = mintUrl
-      initialized = true
-      
-      // After successful initialization, clean up legacy MobileCoin entropy
-      try {
-        SignalStore.payments.cleanupLegacyEntropyAfterCashuMigration()
-      } catch (e: Throwable) {
-        Log.w(TAG, "Failed to cleanup legacy entropy", e)
+    // Thread-safe check with mutex to prevent race conditions
+    initLock.withLock {
+      // Double-check pattern: verify again inside the lock
+      if (initialized && wallet != null && currentMintUrl == mintUrl) {
+        return@withContext
       }
-    } catch (e: Throwable) {
-      Log.w(TAG, "Failed to init CashuEngine for $mintUrl", e)
-      throw e
+
+      Log.i(TAG, "Initializing Cashu wallet for mint: $mintUrl")
+      
+      try {
+        // Capture old instances for delayed cleanup
+        val oldWallet = wallet
+        val oldDb = db
+
+        // Open new database
+        val dbPath = appContext.filesDir.resolve(DB_NAME).absolutePath
+        val newDb = WalletSqliteDatabase(dbPath)
+
+        // Create new wallet
+        val mnemonic = mnemonicManager.getOrCreateMnemonic()
+        val config = WalletConfig(targetProofCount = 10u)
+
+        val newWallet = Wallet(
+          mintUrl = mintUrl,
+          unit = CurrencyUnit.Sat,
+          mnemonic = mnemonic,
+          db = newDb,
+          config = config
+        )
+
+        // Best-effort priming on new wallet
+        runCatching { newWallet.refreshKeysets() }.onFailure { Log.w(TAG, "refreshKeysets failed during init", it) }
+        runCatching { newWallet.getMintInfo() }.onFailure { Log.w(TAG, "getMintInfo failed during init", it) }
+
+        // ATOMIC SWAP: Replace references atomically
+        wallet = newWallet
+        db = newDb
+        currentMintUrl = mintUrl
+        initialized = true
+        
+        val p2pk = keyManager.getOrCreateP2pk()
+        Log.i(TAG, "Cashu wallet initialized for $mintUrl. P2PK pub=${p2pk.pubkeyHex.take(16)}…")
+
+        // Schedule cleanup of old instances after delay to allow in-flight operations to complete
+        if (oldWallet != null || oldDb != null) {
+          GlobalScope.launch(Dispatchers.IO) {
+            delay(CLEANUP_DELAY_MS)
+            runCatching { oldWallet?.close() }.onFailure { 
+              Log.w(TAG, "Error closing old wallet during cleanup", it) 
+            }
+            runCatching { oldDb?.close() }.onFailure { 
+              Log.w(TAG, "Error closing old database during cleanup", it) 
+            }
+            Log.d(TAG, "Old wallet/db instances cleaned up")
+          }
+        }
+        
+        // After successful initialization, clean up legacy MobileCoin entropy
+        try {
+          SignalStore.payments.cleanupLegacyEntropyAfterCashuMigration()
+        } catch (e: Throwable) {
+          Log.w(TAG, "Failed to cleanup legacy entropy", e)
+        }
+      } catch (e: Throwable) {
+        Log.e(TAG, "Failed to init CashuEngine for $mintUrl", e)
+        throw e
+      }
     }
   }
 
