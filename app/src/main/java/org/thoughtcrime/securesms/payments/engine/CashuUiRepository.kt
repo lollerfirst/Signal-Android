@@ -25,12 +25,12 @@ class CashuUiRepository(private val appContext: Context) {
   companion object {
     private val TAG = Log.tag(CashuUiRepository::class.java)
     private const val FIAT_CACHE_DURATION_MS = 30_000L // Cache fiat conversions for 30 seconds
+    
+    // Static cache shared across all instances to persist conversions
+    private val fiatCache = mutableMapOf<Pair<Long, String>, Pair<String, Long>>()
   }
 
   private val rates = CoinbaseRatesProvider()
-  
-  // Cache for fiat conversions to avoid repeated network calls
-  private val fiatCache = mutableMapOf<Pair<Long, String>, Pair<String, Long>>()
 
   private fun engine(): PaymentsEngine = PaymentsEngineProvider.get(appContext)
 

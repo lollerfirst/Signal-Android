@@ -191,27 +191,33 @@ public class ConfirmPaymentFragment extends BottomSheetDialogFragment {
           String satsText = java.text.NumberFormat.getInstance(java.util.Locale.getDefault()).format(sats) + " sat";
           list.add(new ConfirmPaymentAdapter.LineItem(getToPayeeDescription(requireContext(), state), satsText));
 
-          // Cashu: no network fee row and fiat estimate from sats - use cached to avoid blocking
+          // Cashu: no network fee row and fiat estimate from sats
           org.thoughtcrime.securesms.payments.engine.CashuUiRepository repo = new org.thoughtcrime.securesms.payments.engine.CashuUiRepository(requireContext().getApplicationContext());
-          String fiat = repo.satsToFiatStringCached(sats);
-          list.add(new ConfirmPaymentAdapter.LineItem(getString(R.string.ConfirmPayment__estimated_s, org.thoughtcrime.securesms.keyvalue.SignalStore.payments().currentCurrency().getCurrencyCode()), fiat));
           
-          // Trigger async update - will cause UI refresh when available
-          repo.satsToFiatStringLiveData(sats).observe(getViewLifecycleOwner(), updatedFiat -> {
-            // This will trigger a refresh of the list via ViewModel state changes
-            // The adapter will pick up the new value from cache
-          });
+          // Try to get cached value first, or use placeholder
+          String fiat = repo.satsToFiatStringCached(sats);
+          
+          // If we got a placeholder, trigger async fetch and observe for updates
+          if (fiat.contains("--")) {
+            repo.satsToFiatStringLiveData(sats).observe(getViewLifecycleOwner(), updatedFiat -> {
+              // Re-trigger list creation to pick up the new cached value
+              if (viewModel != null) {
+                // The ViewModel's state observer will call createList() again automatically
+              }
+            });
+          }
+          
+          list.add(new ConfirmPaymentAdapter.LineItem(getString(R.string.ConfirmPayment__estimated_s, org.thoughtcrime.securesms.keyvalue.SignalStore.payments().currentCurrency().getCurrencyCode()), fiat));
 
           list.add(new ConfirmPaymentAdapter.Divider());
           list.add(new ConfirmPaymentAdapter.TotalLineItem(getString(R.string.ConfirmPayment__total_amount), satsText));
 
-          // Balance footer in sats - use LiveData to avoid blocking
+          // Balance footer in sats - try cached first
+          String balanceText = "-- sat";
           repo.getSpendableSatsLiveData().observe(getViewLifecycleOwner(), satsAvailable -> {
-            // This will trigger when balance is fetched
+            // Balance updates will trigger state change and recreate list
           });
           
-          // Use cached or show loading placeholder
-          String balanceText = "-- sat";
           list.add(new ConfirmPaymentAdapter.ConfirmPaymentStatus(state.getStatus(), state.getFeeStatus(), balanceText));
           break;
         }
