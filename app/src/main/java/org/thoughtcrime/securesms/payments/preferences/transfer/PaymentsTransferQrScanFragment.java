@@ -48,7 +48,10 @@ public final class PaymentsTransferQrScanFragment extends LoggingFragment {
       overlay.setOrientation(LinearLayout.VERTICAL);
     }
 
-    viewModel = new ViewModelProvider(Navigation.findNavController(view).getViewModelStoreOwner(R.id.payments_transfer), new PaymentsTransferViewModel.Factory()).get(PaymentsTransferViewModel.class);
+    // Only create MobileCoin ViewModel if not using Cashu
+    if (!org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
+      viewModel = new ViewModelProvider(Navigation.findNavController(view).getViewModelStoreOwner(R.id.payments_transfer), new PaymentsTransferViewModel.Factory()).get(PaymentsTransferViewModel.class);
+    }
 
     Toolbar toolbar = view.findViewById(R.id.payments_transfer_scan_qr);
     toolbar.setNavigationOnClickListener(v -> Navigation.findNavController(v).popBackStack());
@@ -64,7 +67,9 @@ public final class PaymentsTransferQrScanFragment extends LoggingFragment {
         .subscribe(data -> {
           try {
             // Accept any QR text as a potential BOLT11 invoice for Cashu withdrawals
-            viewModel.postQrData(data);
+            if (viewModel != null) {
+              viewModel.postQrData(data);
+            }
             SafeNavigation.safeNavigate(Navigation.findNavController(requireView()), R.id.action_paymentsScanQr_pop);
           } catch (Throwable e) {
             Log.e(TAG, "Invalid QR payload", e);
