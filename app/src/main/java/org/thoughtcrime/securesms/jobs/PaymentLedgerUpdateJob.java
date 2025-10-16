@@ -57,6 +57,12 @@ public final class PaymentLedgerUpdateJob extends BaseJob {
 
   @Override
   protected void onRun() throws IOException, RetryLaterException, FogSyncException {
+    // Skip this job entirely for Cashu - it's MobileCoin specific
+    if (SignalStore.payments().cashuEnabled()) {
+      Log.i(TAG, "Cashu enabled, skipping MobileCoin ledger update");
+      return;
+    }
+    
     if (!SignalStore.payments().mobileCoinPaymentsEnabled()) {
       Log.w(TAG, "Payments are not enabled");
       return;

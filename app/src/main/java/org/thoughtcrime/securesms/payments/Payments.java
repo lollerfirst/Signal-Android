@@ -35,7 +35,10 @@ public final class Payments {
       return wallet;
     }
     Entropy paymentsEntropy = SignalStore.payments().getPaymentsEntropy();
-    wallet = new Wallet(mobileCoinConfig, Objects.requireNonNull(paymentsEntropy));
+    if (paymentsEntropy == null) {
+      throw new IllegalStateException("Payments entropy is null - make sure MobileCoin payments are enabled");
+    }
+    wallet = new Wallet(mobileCoinConfig, paymentsEntropy);
     return wallet;
   }
 

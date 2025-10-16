@@ -1,11 +1,12 @@
 package org.thoughtcrime.securesms.payments.preferences.addmoney;
-import org.thoughtcrime.securesms.payments.engine.MintWatcher;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.os.Bundle;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -15,10 +16,14 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.Navigation;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import org.thoughtcrime.securesms.LoggingFragment;
 import org.thoughtcrime.securesms.R;
 import org.thoughtcrime.securesms.components.qr.QrView;
 import org.thoughtcrime.securesms.keyvalue.SignalStore;
+import org.thoughtcrime.securesms.payments.engine.MintQuote;
+import org.thoughtcrime.securesms.payments.engine.MintWatcher;
 import org.thoughtcrime.securesms.payments.preferences.cashu.CashuMintQuoteUiHelper;
 import org.thoughtcrime.securesms.util.views.LearnMoreTextView;
 
@@ -39,7 +44,7 @@ public final class PaymentsAddMoneyFragment extends LoggingFragment {
     View              copyAddress              = view.findViewById(R.id.payments_add_money_copy_address_button);
     LearnMoreTextView info                     = view.findViewById(R.id.payments_add_money_info);
     View              qrBorder                 = view.findViewById(R.id.payments_add_money_qr_border);
-    android.widget.EditText amountInput        = view.findViewById(R.id.cashu_amount_input);
+    EditText          amountInput              = view.findViewById(R.id.cashu_amount_input);
     View              getInvoiceButton         = view.findViewById(R.id.cashu_get_invoice_button);
 
     info.setLearnMoreVisible(true);
@@ -61,11 +66,23 @@ public final class PaymentsAddMoneyFragment extends LoggingFragment {
           Toast.makeText(requireContext(), "Invalid amount", Toast.LENGTH_SHORT).show();
           return;
         }
+        
+        // Hide keyboard
+        InputMethodManager imm = (InputMethodManager) 
+            requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+          imm.hideSoftInputFromWindow(amountInput.getWindowToken(), 0);
+        }
+        
+        // Show spinner before starting background task
+        View progressBar = view.findViewById(R.id.cashu_invoice_progress);
+        if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
+        
         // Fetch in background
         new Thread(() -> {
           String text;
           try {
-            org.thoughtcrime.securesms.payments.engine.MintQuote quote = org.thoughtcrime.securesms.payments.preferences.cashu.CashuMintQuoteUiHelper.requestMintQuote(requireContext(), sats);
+            MintQuote quote = CashuMintQuoteUiHelper.requestMintQuote(requireContext(), sats);
             if (quote != null && quote.getInvoiceBolt11() != null && !quote.getInvoiceBolt11().isEmpty()) {
               text = quote.getInvoiceBolt11();
             } else if (quote != null) {
@@ -78,6 +95,9 @@ public final class PaymentsAddMoneyFragment extends LoggingFragment {
           }
           final String qrText = text;
           requireActivity().runOnUiThread(() -> {
+            // Hide spinner when done
+            if (progressBar != null) progressBar.setVisibility(View.GONE);
+            
             // Hide amount input and button after we have a quote
             View amountContainer = getView().findViewById(R.id.cashu_amount_container);
             if (amountContainer != null) amountContainer.setVisibility(View.GONE);
@@ -120,11 +140,11 @@ public final class PaymentsAddMoneyFragment extends LoggingFragment {
   }
 
   private void showAmountPromptAndMintQuote(@NonNull QrView qrImageView, @NonNull TextView display) {
-    final android.widget.EditText input = new android.widget.EditText(requireContext());
+    final EditText input = new EditText(requireContext());
     input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
     input.setHint("Amount in sats");
 
-    new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+    new MaterialAlertDialogBuilder(requireContext())
         .setTitle("Add funds")
         .setMessage("Enter amount in sats")
         .setView(input)
@@ -134,11 +154,11 @@ public final class PaymentsAddMoneyFragment extends LoggingFragment {
           try {
             sats = Long.parseLong(v);
           } catch (Throwable ignore) {
-            android.widget.Toast.makeText(requireContext(), "Invalid amount", android.widget.Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Invalid amount", Toast.LENGTH_SHORT).show();
             return;
           }
           if (sats <= 0L) {
-            android.widget.Toast.makeText(requireContext(), "Invalid amount", android.widget.Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Invalid amount", Toast.LENGTH_SHORT).show();
             return;
           }
           // Show immediate feedback while fetching invoice off main thread
@@ -148,7 +168,7 @@ public final class PaymentsAddMoneyFragment extends LoggingFragment {
           new Thread(() -> {
             String text;
             try {
-              org.thoughtcrime.securesms.payments.engine.MintQuote quote = org.thoughtcrime.securesms.payments.preferences.cashu.CashuMintQuoteUiHelper.requestMintQuote(requireContext(), sats);
+              MintQuote quote = CashuMintQuoteUiHelper.requestMintQuote(requireContext(), sats);
               if (quote != null && quote.getInvoiceBolt11() != null && !quote.getInvoiceBolt11().isEmpty()) {
                 text = quote.getInvoiceBolt11();
               } else if (quote != null) {
@@ -163,7 +183,7 @@ public final class PaymentsAddMoneyFragment extends LoggingFragment {
             requireActivity().runOnUiThread(() -> {
               display.setText(qrText);
               qrImageView.setQrText(qrText);
-              android.widget.Toast.makeText(requireContext(), "Invoice ready", android.widget.Toast.LENGTH_SHORT).show();
+              Toast.makeText(requireContext(), "Invoice ready", Toast.LENGTH_SHORT).show();
             });
           }).start();
         })

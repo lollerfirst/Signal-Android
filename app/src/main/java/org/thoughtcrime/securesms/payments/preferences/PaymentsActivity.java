@@ -58,7 +58,11 @@ public class PaymentsActivity extends PassphraseRequiredActivity {
 
     dynamicTheme.onResume(this);
 
-    AppDependencies.getJobManager()
-                   .add(PaymentLedgerUpdateJob.updateLedger());
+    // Only schedule MobileCoin ledger update if MobileCoin is enabled, not Cashu
+    if (org.thoughtcrime.securesms.keyvalue.SignalStore.payments().mobileCoinPaymentsEnabled() 
+        && !org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
+      AppDependencies.getJobManager()
+                     .add(PaymentLedgerUpdateJob.updateLedger());
+    }
   }
 }
