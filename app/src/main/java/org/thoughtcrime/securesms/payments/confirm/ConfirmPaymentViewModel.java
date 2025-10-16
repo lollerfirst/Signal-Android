@@ -39,7 +39,7 @@ final class ConfirmPaymentViewModel extends ViewModel {
   private final MutableLiveData<Boolean>   feeRetry;
 
   ConfirmPaymentViewModel(@NonNull ConfirmPaymentState confirmPaymentState,
-                          @NonNull ConfirmPaymentRepository confirmPaymentRepository)
+                          @Nullable ConfirmPaymentRepository confirmPaymentRepository)
   {
     this.store                    = new Store<>(confirmPaymentState);
     this.confirmPaymentRepository = confirmPaymentRepository;
@@ -235,11 +235,17 @@ final class ConfirmPaymentViewModel extends ViewModel {
 
     @Override
     public @NonNull <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
+      // Only create MobileCoin repository if not using Cashu
+      ConfirmPaymentRepository repository = null;
+      if (!org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
+        repository = new ConfirmPaymentRepository(AppDependencies.getPayments().getWallet());
+      }
+      
       //noinspection ConstantConditions
       return modelClass.cast(new ConfirmPaymentViewModel(new ConfirmPaymentState(createPaymentDetails.getPayee(),
                                                                                  createPaymentDetails.getAmount(),
                                                                                  createPaymentDetails.getNote()),
-                                                         new ConfirmPaymentRepository(AppDependencies.getPayments().getWallet())));
+                                                         repository));
     }
   }
 }
