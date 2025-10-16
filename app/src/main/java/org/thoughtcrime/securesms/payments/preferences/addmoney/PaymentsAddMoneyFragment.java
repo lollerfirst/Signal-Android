@@ -36,8 +36,6 @@ public final class PaymentsAddMoneyFragment extends LoggingFragment {
   @Override public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
 
-    PaymentsAddMoneyViewModel viewModel = new ViewModelProvider(this, new PaymentsAddMoneyViewModel.Factory()).get(PaymentsAddMoneyViewModel.class);
-
     Toolbar           toolbar                  = view.findViewById(R.id.payments_add_money_toolbar);
     QrView            qrImageView              = view.findViewById(R.id.payments_add_money_qr_image);
     TextView          walletAddressAbbreviated = view.findViewById(R.id.payments_add_money_abbreviated_wallet_address);
@@ -118,7 +116,9 @@ public final class PaymentsAddMoneyFragment extends LoggingFragment {
       return;
     }
 
-    // Legacy MOB path
+    // Legacy MOB path - create ViewModel only for MobileCoin
+    PaymentsAddMoneyViewModel viewModel = new ViewModelProvider(this, new PaymentsAddMoneyViewModel.Factory()).get(PaymentsAddMoneyViewModel.class);
+    
     viewModel.getSelfAddressAbbreviated().observe(getViewLifecycleOwner(), walletAddressAbbreviated::setText);
     viewModel.getSelfAddressB58().observe(getViewLifecycleOwner(), base58 -> copyAddress.setOnClickListener(v -> copyAddressToClipboard(base58)));
     // Note we are choosing to put Base58 directly into QR here

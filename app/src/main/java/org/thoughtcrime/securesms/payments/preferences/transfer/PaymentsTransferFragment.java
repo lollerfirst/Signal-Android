@@ -37,8 +37,6 @@ public final class PaymentsTransferFragment extends LoggingFragment {
   public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
 
-    PaymentsTransferViewModel viewModel = new ViewModelProvider(Navigation.findNavController(view).getViewModelStoreOwner(R.id.payments_transfer), new PaymentsTransferViewModel.Factory()).get(PaymentsTransferViewModel.class);
-
     Toolbar toolbar = view.findViewById(R.id.payments_transfer_toolbar);
 
     view.findViewById(R.id.payments_transfer_scan_qr).setOnClickListener(v -> scanQrCode());
@@ -53,7 +51,11 @@ public final class PaymentsTransferFragment extends LoggingFragment {
       return false;
     });
 
-    viewModel.getAddress().observe(getViewLifecycleOwner(), address::setText);
+    // Only create MobileCoin ViewModel if not using Cashu
+    if (!org.thoughtcrime.securesms.keyvalue.SignalStore.payments().cashuEnabled()) {
+      PaymentsTransferViewModel viewModel = new ViewModelProvider(Navigation.findNavController(view).getViewModelStoreOwner(R.id.payments_transfer), new PaymentsTransferViewModel.Factory()).get(PaymentsTransferViewModel.class);
+      viewModel.getAddress().observe(getViewLifecycleOwner(), address::setText);
+    }
 
     toolbar.setNavigationOnClickListener(v -> {
       ViewUtil.hideKeyboard(requireContext(), v);
